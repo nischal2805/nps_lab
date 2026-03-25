@@ -238,7 +238,7 @@ class TestExtractSecrets:
     def test_detects_stripe_key(self, tmp_path: Path) -> None:
         """Should detect Stripe live key pattern."""
         js_file = tmp_path / "payment.js"
-        js_file.write_text('const key = "sk_live_4eC39HqLyjWDarjtT1zdp7dc";')
+        js_file.write_text('const key = "sk_live_4************dc";')
         
         file_tree = list(walk_files(tmp_path))
         secrets = extract_secrets(file_tree)
