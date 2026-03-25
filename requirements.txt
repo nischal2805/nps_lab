@@ -1,0 +1,30 @@
+# Network probing
+dnspython>=2.4.0
+httpx>=0.25.0
+
+# Concurrency (built-in asyncio, but throttling helps)
+asyncio-throttle>=1.0.1
+
+# Static analysis - AST parsing
+tree-sitter>=0.20.0
+tree-sitter-python>=0.20.0
+tree-sitter-javascript>=0.20.0
+tree-sitter-java>=0.20.0
+tree-sitter-typescript>=0.20.0
+
+# Git operations (clone, history scanning)
+gitpython>=3.1.0
+
+# CLI
+click>=8.1.0
+rich>=13.0.0
+
+# TLS/Crypto inspection
+cryptography>=41.0.0
+
+# YAML/TOML parsing (for config files)
+pyyaml>=6.0
+toml>=0.10.2
+
+# JSON Schema validation
+jsonschema>=4.19.0
