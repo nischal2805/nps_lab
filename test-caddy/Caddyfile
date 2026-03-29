@@ -1,0 +1,57 @@
+# Caddyfile - Secure configuration with best practices
+# https://caddyserver.com/docs/caddyfile
+
+{
+    # Global options for enhanced security
+    auto_https off  # Disabled for localhost testing
+    admin off       # Disable admin API for security
+}
+
+# HTTP server with security headers
+:80 {
+    # Root directory
+    root * /srv
+    
+    # Enable file server
+    file_server
+    
+    # Security headers (industry best practices)
+    header {
+        # Prevent clickjacking
+        X-Frame-Options "DENY"
+        
+        # Enable XSS protection
+        X-Content-Type-Options "nosniff"
+        
+        # Content Security Policy (strict)
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';"
+        
+        # Strict Transport Security (for HTTPS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Permissions Policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        
+        # Remove Server header
+        -Server
+    }
+    
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # Default response
+    handle {
+        file_server
+    }
+    
+    # Enable access logging
+    log {
+        output stdout
+        format console
+    }
+}

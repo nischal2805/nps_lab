@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Test Application</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #27ae60;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .security-features {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        ul { line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            Secure Test Application
+            <span class="badge">✓ SECURE</span>
+        </h1>
+        
+        <p>This is a demonstration of a <strong>well-secured web application</strong> using modern security best practices.</p>
+        
+        <div class="security-features">
+            <h2>Security Features Enabled:</h2>
+            <ul>
+                <li><strong>Content-Security-Policy:</strong> Strict CSP preventing XSS attacks</li>
+                <li><strong>X-Frame-Options:</strong> DENY - prevents clickjacking</li>
+                <li><strong>X-Content-Type-Options:</strong> nosniff - prevents MIME sniffing</li>
+                <li><strong>Strict-Transport-Security:</strong> HSTS enabled with preload</li>
+                <li><strong>Referrer-Policy:</strong> Controlled referrer information</li>
+                <li><strong>Permissions-Policy:</strong> Restricted browser features</li>
+                <li><strong>Server Header:</strong> Removed to prevent information disclosure</li>
+            </ul>
+        </div>
+        
+        <h2>Expected NetSentinel Scan Results:</h2>
+        <ul>
+            <li>Grade: <strong>A or B</strong></li>
+            <li>Findings: <strong>0-3 (low severity only)</strong></li>
+            <li>HTTP Module: <strong>90+ score</strong></li>
+            <li>Security Headers: <strong>All present</strong></li>
+        </ul>
+        
+        <p style="color: #7f8c8d; font-size: 14px; margin-top: 40px;">
+            Powered by Caddy - The secure web server
+        </p>
+    </div>
+</body>
+</html>

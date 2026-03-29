@@ -12,10 +12,12 @@ Commands:
 - list: List all past scans
 """
 
+import asyncio
 import os
 import sys
 import socket
 import subprocess
+import threading
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +33,10 @@ from rich.panel import Panel
 
 from netsentinel.models import ScanConfig, ScanResult, AttackSurfaceManifest
 from netsentinel import __version__
+from netsentinel.static_analyzer import analyze, analyze_with_findings
+from netsentinel.probes.engine import run_live_probes
+from netsentinel.scoring import generate_score_report
+from netsentinel.dashboard.server import start_server
 
 console = Console()
 
@@ -164,7 +170,7 @@ def main():
 
 @main.command()
 @click.option('--target', '-t', help='Local path or GitHub URL to codebase')
-@click.option('--host', '-h', 'host', help='IP address or domain of live target')
+@click.option('--host', '-h', 'host', help='IP address or domain of live target (can include port as host:port)')
 @click.option('--port', '-p', type=int, help='Specific port to focus on')
 @click.option('--live-only', is_flag=True, help='Skip static analysis')
 @click.option('--static-only', is_flag=True, help='Skip live probing')
@@ -178,9 +184,21 @@ def scan(target: Optional[str], host: Optional[str], port: Optional[int],
         
         netsentinel scan --host 192.168.1.1 --live-only
         
+        netsentinel scan --host localhost:8080 --live-only
+        
         netsentinel scan --target https://github.com/user/repo --static-only
     """
-    # 1. Create ScanConfig from options
+    # 1. Parse host:port format if present
+    if host and ':' in host and port is None:
+        try:
+            host_part, port_part = host.rsplit(':', 1)
+            port = int(port_part)
+            host = host_part
+        except ValueError:
+            # Not a valid port, keep host as-is
+            pass
+    
+    # 2. Create ScanConfig from options
     config = ScanConfig(
         target=target,
         host=host,
@@ -241,105 +259,50 @@ def scan(target: Optional[str], host: Optional[str], port: Optional[int],
         if config.requires_static_analysis:
             task = progress.add_task("Running static analysis...", total=None)
             
-            # TODO: Import and call static analyzer when implemented
-            # from netsentinel.static_analyzer import StaticAnalyzer
-            # analyzer = StaticAnalyzer(config.target)
-            # manifest = analyzer.analyze()
-            
-            # Stub: Create empty manifest
-            manifest = AttackSurfaceManifest(
-                scan_id=config.scan_id,
-                target=config.target or "",
-                extracted_at=datetime.utcnow().isoformat() + "Z",
-            )
-            
-            progress.update(task, description="[green]✓[/green] Static analysis complete")
-            progress.remove_task(task)
+            try:
+                manifest, static_findings = analyze_with_findings(config.target, config.scan_id)
+                findings.extend(static_findings)
+                progress.update(task, description=f"[green]✓[/green] Static analysis complete ({len(static_findings)} SBOM findings)")
+            except Exception as e:
+                progress.update(task, description=f"[red]✗[/red] Static analysis failed: {e}")
+                console.print(f"[red]Error during static analysis: {e}[/red]")
+                sys.exit(1)
+            finally:
+                progress.remove_task(task)
         
         # 4. Run live probes if not --static-only
         if config.requires_live_probing:
-            # Network/Transport layer
-            task = progress.add_task("Probing network layer...", total=None)
+            task = progress.add_task("Running live probes (network, TLS, HTTP, DNS)...", total=None)
             
-            # TODO: Import and call network probe when implemented
-            # from netsentinel.probes.network import NetworkProbe
-            # network_probe = NetworkProbe(config.host, config.port)
-            # network_findings = network_probe.run()
-            # findings.extend(network_findings)
-            
-            progress.update(task, description="[green]✓[/green] Network probe complete")
-            progress.remove_task(task)
-            
-            # TLS/SSL layer
-            task = progress.add_task("Analyzing TLS/SSL configuration...", total=None)
-            
-            # TODO: Import and call TLS probe when implemented
-            # from netsentinel.probes.tls_probe import TLSProbe
-            # tls_probe = TLSProbe(config.host, config.port or 443)
-            # tls_findings = tls_probe.run()
-            # findings.extend(tls_findings)
-            
-            progress.update(task, description="[green]✓[/green] TLS analysis complete")
-            progress.remove_task(task)
-            
-            # HTTP application layer
-            task = progress.add_task("Probing HTTP layer...", total=None)
-            
-            # TODO: Import and call HTTP probe when implemented
-            # from netsentinel.probes.http_probe import HTTPProbe
-            # http_probe = HTTPProbe(config.host, config.port or 80)
-            # http_findings = http_probe.run()
-            # findings.extend(http_findings)
-            
-            progress.update(task, description="[green]✓[/green] HTTP probe complete")
-            progress.remove_task(task)
-            
-            # DNS layer
-            task = progress.add_task("Analyzing DNS configuration...", total=None)
-            
-            # TODO: Import and call DNS probe when implemented
-            # from netsentinel.probes.dns_probe import DNSProbe
-            # dns_probe = DNSProbe(config.host)
-            # dns_findings = dns_probe.run()
-            # findings.extend(dns_findings)
-            
-            progress.update(task, description="[green]✓[/green] DNS analysis complete")
-            progress.remove_task(task)
+            try:
+                # Run all probes concurrently via async orchestrator
+                findings = asyncio.run(run_live_probes(config, manifest))
+                progress.update(task, description=f"[green]✓[/green] Live probes complete ({len(findings)} findings)")
+            except Exception as e:
+                progress.update(task, description=f"[red]✗[/red] Live probes failed: {e}")
+                console.print(f"[red]Error during live probing: {e}[/red]")
+                sys.exit(1)
+            finally:
+                progress.remove_task(task)
         
         # 5. Run scoring engine
         task = progress.add_task("Calculating security scores...", total=None)
         
-        # TODO: Import and call scoring engine when implemented
-        # from netsentinel.scoring import ScoringEngine
-        # scorer = ScoringEngine()
-        # scores, summary, owasp_coverage = scorer.calculate(findings)
-        
-        # Stub: Create default scores
-        from netsentinel.models import Scores, ScoreSummary, OWASPCoverage
-        
-        scores = Scores(
-            network=100,
-            tls=100,
-            http=100,
-            dns=100,
-            weighted_overall=100.0,
-            grade="A",
-        )
-        
-        summary = ScoreSummary(
-            total_findings=len(findings),
-            by_severity={"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
-            highest_cvss=0.0,
-            highest_cvss_finding="",
-        )
-        
-        owasp_coverage = [
-            OWASPCoverage(owasp_id=f"A{i:02d}", status="untested", finding_count=0)
-            for i in range(1, 11)
-        ]
-        
-        progress.update(task, description="[green]✓[/green] Scoring complete")
-        progress.remove_task(task)
+        try:
+            from netsentinel.models import Scores, ScoreSummary, OWASPCoverage
+            
+            score_report = generate_score_report(findings)
+            scores = Scores(**score_report['scores'])
+            summary = ScoreSummary(**score_report['summary'])
+            owasp_coverage = [OWASPCoverage(**item) for item in score_report['owasp_coverage']]
+            
+            progress.update(task, description="[green]✓[/green] Scoring complete")
+        except Exception as e:
+            progress.update(task, description=f"[red]✗[/red] Scoring failed: {e}")
+            console.print(f"[red]Error during scoring: {e}[/red]")
+            sys.exit(1)
+        finally:
+            progress.remove_task(task)
         
         # Record completion time
         completed_at = datetime.utcnow().isoformat() + "Z"
@@ -387,14 +350,32 @@ def scan(target: Optional[str], host: Optional[str], port: Optional[int],
     # 7. Launch dashboard
     console.print("\n[dim]Launching dashboard...[/dim]")
     
-    # TODO: Implement dashboard launch when server is ready
-    # from netsentinel.dashboard.server import start_server
-    # start_server(scan_id=config.scan_id)
+    try:
+        # Start dashboard server in background thread
+        server_thread = threading.Thread(
+            target=start_server,
+            args=(8742, True),  # port, open_browser
+            daemon=True
+        )
+        server_thread.start()
+        
+        console.print(f"[green]Dashboard launched at http://localhost:8742[/green]")
+        console.print(f"[dim]Results saved to: {scan_file}[/dim]")
+        console.print(f"\n[yellow]Press Ctrl+C to stop the dashboard server[/yellow]")
+        
+        # Keep main thread alive to prevent daemon thread from being killed
+        try:
+            while True:
+                import time
+                time.sleep(1)
+        except KeyboardInterrupt:
+            console.print("\n[dim]Shutting down dashboard...[/dim]")
+            sys.exit(0)
     
-    console.print(f"[dim]Dashboard not yet implemented. View results at:[/dim]")
-    console.print(f"  {scan_file}")
-    
-    sys.exit(0)
+    except Exception as e:
+        console.print(f"[red]Error launching dashboard: {e}[/red]")
+        console.print(f"[dim]Results saved to: {scan_file}[/dim]")
+        sys.exit(1)
 
 
 @main.command()
@@ -461,11 +442,30 @@ def report(last: bool, scan_id: Optional[str]):
         
         console.print(table)
     
-    # TODO: Launch dashboard when implemented
-    # from netsentinel.dashboard.server import start_server
-    # start_server(scan_id=scan_id)
+    try:
+        # Start dashboard server in background thread
+        server_thread = threading.Thread(
+            target=start_server,
+            args=(8742, True),  # port, open_browser
+            daemon=True
+        )
+        server_thread.start()
+        
+        console.print(f"\n[green]Dashboard launched at http://localhost:8742[/green]")
+        console.print(f"[yellow]Press Ctrl+C to stop the dashboard server[/yellow]")
+        
+        # Keep main thread alive
+        try:
+            while True:
+                import time
+                time.sleep(1)
+        except KeyboardInterrupt:
+            console.print("\n[dim]Shutting down dashboard...[/dim]")
+            sys.exit(0)
     
-    console.print("\n[dim]Dashboard server not yet implemented.[/dim]")
+    except Exception as e:
+        console.print(f"[red]Error launching dashboard: {e}[/red]")
+        sys.exit(1)
 
 
 @main.command()
@@ -567,11 +567,32 @@ def compare(scan_ids: tuple[str, str]):
     
     console.print(table)
     
-    # TODO: Launch dashboard compare view when implemented
-    # from netsentinel.dashboard.server import start_server
-    # start_server(compare=[scan_ids[0], scan_ids[1]])
+    try:
+        # Start dashboard server in background thread
+        # Note: Compare view requires dashboard UI support for URL params
+        server_thread = threading.Thread(
+            target=start_server,
+            args=(8742, True),  # port, open_browser
+            daemon=True
+        )
+        server_thread.start()
+        
+        console.print(f"\n[green]Dashboard launched at http://localhost:8742[/green]")
+        console.print(f"[dim]Use the Compare tab in the dashboard to view side-by-side comparison[/dim]")
+        console.print(f"[yellow]Press Ctrl+C to stop the dashboard server[/yellow]")
+        
+        # Keep main thread alive
+        try:
+            while True:
+                import time
+                time.sleep(1)
+        except KeyboardInterrupt:
+            console.print("\n[dim]Shutting down dashboard...[/dim]")
+            sys.exit(0)
     
-    console.print("\n[dim]Dashboard comparison view not yet implemented.[/dim]")
+    except Exception as e:
+        console.print(f"[red]Error launching dashboard: {e}[/red]")
+        sys.exit(1)
 
 
 @main.command('list')

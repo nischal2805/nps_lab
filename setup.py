@@ -1,17 +1,18 @@
 """Setup script for NetSentinel."""
 
 from setuptools import setup, find_packages
+from pathlib import Path
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read() if fh else ""
+# Read long description from README
+readme_path = Path(__file__).parent / "README.md"
+if readme_path.exists():
+    with open(readme_path, "r", encoding="utf-8") as fh:
+        long_description = fh.read()
+else:
+    long_description = ""
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [
-        line.strip()
-        for line in fh
-        if line.strip() and not line.startswith("#")
-    ]
-
+# Requirements are defined in pyproject.toml - don't read requirements.txt
+# since it may not exist and pyproject.toml is the source of truth
 setup(
     name="netsentinel",
     version="0.1.0",
@@ -21,7 +22,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.10",
-    install_requires=requirements,
+    # install_requires is read from pyproject.toml automatically
     entry_points={
         "console_scripts": [
             "netsentinel=netsentinel.cli:main",

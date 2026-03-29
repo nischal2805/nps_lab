@@ -9,6 +9,7 @@ from .manifest import (
     OutboundHost,
     TLSConfig,
     DNSConfig,
+    DependencyEntry,
 )
 from .scan_config import ScanConfig
 from .scan_result import (
@@ -32,6 +33,7 @@ __all__ = [
     "OutboundHost",
     "TLSConfig",
     "DNSConfig",
+    "DependencyEntry",
     # Config models
     "ScanConfig",
     # Result models

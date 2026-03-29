@@ -35,6 +35,7 @@ class DomainScore:
 class OWASPCoverage:
     """OWASP category coverage status."""
     owasp_id: str
+    category: str  # Category name
     status: str  # pass, fail, untested
     finding_count: int
 
@@ -91,8 +92,9 @@ class Scores:
     tls: int
     http: int
     dns: int
-    weighted_overall: float
-    grade: str  # A, B, C, D, F
+    static: int = 100  # Static analysis score (default 100 if not run)
+    weighted_overall: float = 0.0
+    grade: str = "A"  # A, B, C, D, F
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

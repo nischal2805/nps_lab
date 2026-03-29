@@ -238,14 +238,16 @@ class TestExtractSecrets:
     def test_detects_stripe_key(self, tmp_path: Path) -> None:
         """Should detect Stripe live key pattern."""
         js_file = tmp_path / "payment.js"
-        js_file.write_text('const key = "sk_live_4************dc";')
+        # Key must be at least 24 chars after sk_live_ per config.py regex
+        js_file.write_text('const key = "sk_live_abcdefghij1234567890ABCD";')
         
         file_tree = list(walk_files(tmp_path))
         secrets = extract_secrets(file_tree)
         
         assert len(secrets) >= 1
         assert any(s.type == "stripe_live_key" for s in secrets)
-        assert "****" in secrets[0].preview
+        stripe_secret = next(s for s in secrets if s.type == "stripe_live_key")
+        assert "****" in stripe_secret.preview
 
     def test_skips_placeholder_values(self, tmp_path: Path) -> None:
         """Should skip placeholder values."""

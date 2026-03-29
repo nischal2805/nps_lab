@@ -149,8 +149,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     
     def log_message(self, format, *args):
         """Override to customize logging format."""
-        # Only log errors, not every request
-        pass
+        # Log all requests for debugging
+        print(format % args)
 
 
 def start_server(port: int = 8742, open_browser: bool = True):

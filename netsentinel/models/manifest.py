@@ -179,6 +179,40 @@ class DNSConfig:
 
 
 @dataclass
+class DependencyEntry:
+    """A dependency extracted from package manifests (SBOM)."""
+    name: str
+    version: str
+    ecosystem: str  # npm, PyPI, Go, Maven, etc.
+    source_file: str
+    vulnerable: bool = False
+    vulnerability_count: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "name": self.name,
+            "version": self.version,
+            "ecosystem": self.ecosystem,
+            "source_file": self.source_file,
+            "vulnerable": self.vulnerable,
+            "vulnerability_count": self.vulnerability_count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'DependencyEntry':
+        """Create DependencyEntry from dictionary."""
+        return cls(
+            name=data.get("name", ""),
+            version=data.get("version", ""),
+            ecosystem=data.get("ecosystem", ""),
+            source_file=data.get("source_file", ""),
+            vulnerable=bool(data.get("vulnerable", False)),
+            vulnerability_count=int(data.get("vulnerability_count", 0)),
+        )
+
+
+@dataclass
 class AttackSurfaceManifest:
     """Complete attack surface manifest from static analysis."""
     scan_id: str
@@ -189,6 +223,7 @@ class AttackSurfaceManifest:
     routes: List[RouteEntry] = field(default_factory=list)
     outbound_hosts: List[OutboundHost] = field(default_factory=list)
     secrets_found: List[SecretEntry] = field(default_factory=list)
+    dependencies: List[DependencyEntry] = field(default_factory=list)
     tls_config: Optional[TLSConfig] = None
     dns_config: Optional[DNSConfig] = None
 
@@ -203,6 +238,7 @@ class AttackSurfaceManifest:
             "routes": [r.to_dict() for r in self.routes],
             "outbound_hosts": [h.to_dict() for h in self.outbound_hosts],
             "secrets_found": [s.to_dict() for s in self.secrets_found],
+            "dependencies": [d.to_dict() for d in self.dependencies],
         }
         if self.tls_config is not None:
             result["tls_config"] = self.tls_config.to_dict()
@@ -217,6 +253,7 @@ class AttackSurfaceManifest:
         routes = [RouteEntry.from_dict(r) for r in data.get("routes", [])]
         outbound_hosts = [OutboundHost.from_dict(h) for h in data.get("outbound_hosts", [])]
         secrets_found = [SecretEntry.from_dict(s) for s in data.get("secrets_found", [])]
+        dependencies = [DependencyEntry.from_dict(d) for d in data.get("dependencies", [])]
 
         tls_config = None
         if data.get("tls_config"):
@@ -235,6 +272,7 @@ class AttackSurfaceManifest:
             routes=routes,
             outbound_hosts=outbound_hosts,
             secrets_found=secrets_found,
+            dependencies=dependencies,
             tls_config=tls_config,
             dns_config=dns_config,
         )

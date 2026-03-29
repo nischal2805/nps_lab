@@ -1,0 +1,54 @@
+version: '3.8'
+
+# Test targets for NetSentinel validation
+services:
+  # =========================================================================
+  # NEGATIVE TEST CASE: DVWA (Damn Vulnerable Web Application)
+  # =========================================================================
+  # Official vulnerable web app for security testing
+  # Source: https://github.com/digininja/DVWA
+  # Security Level: INTENTIONALLY VULNERABLE (F grade expected)
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    container_name: netsentinel-test-dvwa
+    ports:
+      - "8080:80"
+    environment:
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+      - MYSQL_ROOT_PASSWORD=r00tpass
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =========================================================================
+  # POSITIVE TEST CASE: Caddy (Modern Secure Web Server)
+  # =========================================================================
+  # Caddy with automatic HTTPS and security best practices
+  # Source: https://caddyserver.com/
+  # Security Level: SECURE (A/B grade expected)
+  caddy:
+    image: caddy:2-alpine
+    container_name: netsentinel-test-caddy
+    ports:
+      - "8443:443"
+      - "8081:80"
+    volumes:
+      - ./test-caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./test-caddy/www:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  caddy_data:
+  caddy_config:

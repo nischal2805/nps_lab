@@ -1,0 +1,161 @@
+version: '3.8'
+
+# ============================================================================
+# NetSentinel Docker Compose Configuration
+# ============================================================================
+# This file provides example configurations for running NetSentinel in Docker.
+# Uncomment and modify the services below based on your use case.
+
+services:
+  # --------------------------------------------------------------------------
+  # Main NetSentinel service (dashboard server)
+  # --------------------------------------------------------------------------
+  netsentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: netsentinel:latest
+    container_name: netsentinel
+    
+    # Dashboard server mode (persistent web interface)
+    command: dashboard --host 0.0.0.0 --port 8080
+    
+    ports:
+      # Map host port 8080 to container port 8080
+      - "8080:8080"
+    
+    volumes:
+      # Persist scan results across container restarts
+      - ./scans:/home/netsentinel/.netsentinel/scans
+      # Optional: custom report output directory
+      - ./reports:/reports
+    
+    environment:
+      # Optional: override default data directory
+      - NETSENTINEL_DATA_DIR=/home/netsentinel/.netsentinel
+      # Optional: set log level
+      - NETSENTINEL_LOG_LEVEL=INFO
+    
+    # Use host network for scanning localhost/local network
+    # Comment out if only scanning remote hosts
+    # network_mode: host
+    
+    restart: unless-stopped
+    
+    # Resource limits (adjust based on scan size)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+
+  # --------------------------------------------------------------------------
+  # Example: One-shot scan service
+  # --------------------------------------------------------------------------
+  # Uncomment to run a single scan and exit
+  # netsentinel-scan:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: netsentinel:latest
+  #   container_name: netsentinel-scan
+  #   
+  #   # Scan a specific host (live probing only)
+  #   command: scan --host example.com --live-only --output /reports/example-scan.json
+  #   
+  #   volumes:
+  #     - ./scans:/home/netsentinel/.netsentinel/scans
+  #     - ./reports:/reports
+  #   
+  #   # Use host network for scanning
+  #   network_mode: host
+  #   
+  #   # Remove container after completion
+  #   restart: "no"
+
+
+  # --------------------------------------------------------------------------
+  # Example: Full scan (static + live)
+  # --------------------------------------------------------------------------
+  # Uncomment to scan a GitHub repository + live host
+  # netsentinel-full-scan:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: netsentinel:latest
+  #   container_name: netsentinel-full-scan
+  #   
+  #   # Scan GitHub repo + live host
+  #   command: >
+  #     scan 
+  #     --target https://github.com/example/repo
+  #     --host example.com
+  #     --output /reports/full-scan.json
+  #   
+  #   volumes:
+  #     - ./scans:/home/netsentinel/.netsentinel/scans
+  #     - ./reports:/reports
+  #   
+  #   environment:
+  #     # Optional: GitHub token for private repos
+  #     - GITHUB_TOKEN=${GITHUB_TOKEN}
+  #   
+  #   network_mode: host
+  #   restart: "no"
+
+
+  # --------------------------------------------------------------------------
+  # Example: Static-only scan (local codebase)
+  # --------------------------------------------------------------------------
+  # Uncomment to scan a local codebase mounted as volume
+  # netsentinel-static-scan:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: netsentinel:latest
+  #   container_name: netsentinel-static-scan
+  #   
+  #   # Scan mounted codebase
+  #   command: scan --target /codebase --static-only --output /reports/static-scan.json
+  #   
+  #   volumes:
+  #     - ./your-project:/codebase:ro  # Mount your codebase read-only
+  #     - ./scans:/home/netsentinel/.netsentinel/scans
+  #     - ./reports:/reports
+  #   
+  #   restart: "no"
+
+
+# ============================================================================
+# Networks (optional custom network configuration)
+# ============================================================================
+# networks:
+#   netsentinel-net:
+#     driver: bridge
+
+
+# ============================================================================
+# Usage Examples
+# ============================================================================
+# 
+# Start dashboard server:
+#   docker-compose up -d netsentinel
+#   Access at: http://localhost:8080
+# 
+# Run one-shot scan:
+#   docker-compose run --rm netsentinel scan --host example.com
+# 
+# View logs:
+#   docker-compose logs -f netsentinel
+# 
+# Stop all services:
+#   docker-compose down
+# 
+# Rebuild after code changes:
+#   docker-compose build --no-cache
+# 
+# ============================================================================

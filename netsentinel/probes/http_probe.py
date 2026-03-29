@@ -9,10 +9,13 @@ This module analyzes HTTP security configurations:
 - Redirect chain analysis
 - Mixed content detection
 """
+import logging
 import re
 from typing import List, Optional
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from netsentinel.config import (
     DATABASE_ERROR_PATTERNS,
@@ -560,6 +563,24 @@ def check_cookie_security(
     return findings
 
 
+# Common HTTPS ports (should use https:// scheme)
+HTTPS_PORTS = {443, 8443, 4443, 9443}
+
+
+def _determine_scheme(port: int) -> str:
+    """Determine HTTP scheme based on port number."""
+    return 'https' if port in HTTPS_PORTS else 'http'
+
+
+def _try_connect(client: httpx.Client, base_url: str) -> bool:
+    """Test if the base URL is reachable."""
+    try:
+        response = client.get(f'{base_url}/', timeout=5.0)
+        return response.status_code < 500
+    except httpx.RequestError:
+        return False
+
+
 def probe_http(
     host: str,
     port: int,
@@ -579,7 +600,10 @@ def probe_http(
         List of Finding objects
     """
     findings = []
-    base_url = f'https://{host}:{port}' if port == 443 else f'http://{host}:{port}'
+    
+    # Determine scheme based on port
+    scheme = _determine_scheme(port)
+    base_url = f'{scheme}://{host}:{port}'
 
     # Use routes from manifest or defaults
     routes_to_check = routes or DEFAULT_ROUTES
@@ -591,6 +615,20 @@ def probe_http(
             follow_redirects=True,
             headers={'User-Agent': USER_AGENT}
         ) as client:
+            # Try primary scheme first, fallback to alternate if connection fails
+            if not _try_connect(client, base_url):
+                alt_scheme = 'http' if scheme == 'https' else 'https'
+                alt_url = f'{alt_scheme}://{host}:{port}'
+                logger.debug(f"Primary scheme {scheme} failed for {host}:{port}, trying {alt_scheme}")
+                if _try_connect(client, alt_url):
+                    base_url = alt_url
+                    logger.info(f"Using alternate scheme: {base_url}")
+                else:
+                    logger.warning(f"HTTP probe: Cannot connect to {host}:{port} on either scheme")
+                    return findings
+            
+            logger.info(f"HTTP probe starting for {base_url}")
+            
             # 1. Security headers check
             findings.extend(check_security_headers(client, base_url, routes_to_check, scan_id))
 
@@ -614,9 +652,10 @@ def probe_http(
 
             # 8. SQLi surface detection (GET only)
             findings.extend(check_sqli_errors(client, base_url, routes_to_check, scan_id))
+            
+            logger.info(f"HTTP probe completed for {base_url}: {len(findings)} findings")
 
-    except httpx.RequestError:
-        # Connection failed - target may be down
-        pass
+    except httpx.RequestError as e:
+        logger.warning(f"HTTP probe failed for {host}:{port}: {e}")
 
     return findings

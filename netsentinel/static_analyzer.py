@@ -3,7 +3,7 @@ Static analysis module for NetSentinel.
 
 Reads source code (local or GitHub) and extracts attack surface WITHOUT
 executing any code. Produces an AttackSurfaceManifest with ports, routes,
-secrets, TLS config, and DNS config.
+secrets, TLS config, DNS config, and dependency information (SBOM).
 """
 import os
 import re
@@ -18,13 +18,16 @@ import yaml
 from netsentinel.config import SECRET_PATTERNS
 from netsentinel.models import (
     AttackSurfaceManifest,
+    DependencyEntry,
     DNSConfig,
+    Finding,
     OutboundHost,
     PortEntry,
     RouteEntry,
     SecretEntry,
     TLSConfig,
 )
+from netsentinel.sbom import generate_sbom_findings, Dependency
 
 # File extensions to include in analysis
 INCLUDED_EXTENSIONS = {
@@ -59,6 +62,24 @@ def analyze(target: str, scan_id: str) -> AttackSurfaceManifest:
     Returns:
         AttackSurfaceManifest with all extracted data
     """
+    manifest, _ = analyze_with_findings(target, scan_id)
+    return manifest
+
+
+def analyze_with_findings(target: str, scan_id: str) -> Tuple[AttackSurfaceManifest, List[Finding]]:
+    """
+    Analyze a codebase and return both the manifest and any security findings.
+    
+    This is the main analysis function that also performs SBOM vulnerability
+    checking and generates findings for vulnerable dependencies.
+    
+    Args:
+        target: Local path or GitHub HTTPS URL
+        scan_id: UUID for this scan
+        
+    Returns:
+        Tuple of (AttackSurfaceManifest, List[Finding])
+    """
     cloned_path: Optional[Path] = None
     root_path: Path
     
@@ -84,7 +105,15 @@ def analyze(target: str, scan_id: str) -> AttackSurfaceManifest:
         tls_config = extract_tls_config(file_tree)
         dns_config = extract_dns_config(file_tree)
         
-        # 4. Assemble manifest
+        # 4. Generate SBOM and vulnerability findings
+        sbom_findings, sbom_dependencies = generate_sbom_findings(
+            root_path, scan_id, file_tree
+        )
+        
+        # Convert SBOM dependencies to manifest format
+        dependencies = _convert_sbom_dependencies(sbom_dependencies)
+        
+        # 5. Assemble manifest
         manifest = AttackSurfaceManifest(
             scan_id=scan_id,
             target=target,
@@ -94,16 +123,32 @@ def analyze(target: str, scan_id: str) -> AttackSurfaceManifest:
             routes=routes,
             outbound_hosts=outbound,
             secrets_found=secrets,
+            dependencies=dependencies,
             tls_config=tls_config,
             dns_config=dns_config,
         )
         
-        return manifest
+        return manifest, sbom_findings
         
     finally:
-        # 5. Clean up temp dir if cloned
+        # 6. Clean up temp dir if cloned
         if cloned_path:
             cleanup_temp(cloned_path)
+
+
+def _convert_sbom_dependencies(deps: List[Dependency]) -> List[DependencyEntry]:
+    """Convert SBOM Dependency objects to DependencyEntry for the manifest."""
+    return [
+        DependencyEntry(
+            name=dep.name,
+            version=dep.version,
+            ecosystem=dep.ecosystem,
+            source_file=dep.source_file,
+            vulnerable=len(dep.vulnerabilities) > 0,
+            vulnerability_count=len(dep.vulnerabilities),
+        )
+        for dep in deps
+    ]
 
 
 def _is_github_url(target: str) -> bool:

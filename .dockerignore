@@ -1,0 +1,109 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# GitHub
+.github/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml
+Jenkinsfile
+
+# Development tools
+.editorconfig
+.pre-commit-config.yaml
+
+# Local development files
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Scan outputs (don't bake into image)
+scans/
+reports/
+*.json
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Docker files (don't need in image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Python version management
+.python-version
+.pyenv
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environment files
+.env
+.env.*

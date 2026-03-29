@@ -429,6 +429,24 @@
             color: var(--text-secondary);
         }
 
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 26, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
         .spinner {
             border: 3px solid var(--border-color);
             border-top: 3px solid var(--info);
@@ -709,6 +727,12 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Loading scan data...</p>
+    </div>
+
     <!-- Side Drawer for Finding Details -->
     <div class="drawer" id="findingDrawer">
         <div class="drawer-header">
@@ -776,7 +800,7 @@
         // Load all scans
         async function loadScans() {
             try {
-                showLoading('overview');
+                showLoading();
                 const response = await fetch('/api/scans');
                 
                 if (!response.ok) {
@@ -797,6 +821,7 @@
                     populateHistory();
                     populateCompareDropdowns();
                 } else {
+                    hideLoading();
                     showEmptyState('overview', 'No scans available yet');
                 }
             } catch (error) {
@@ -808,7 +833,7 @@
         // Load a specific scan
         async function loadScan(scanId) {
             try {
-                showLoading('overview');
+                showLoading();
                 const response = await fetch(`/api/scans/${scanId}`);
                 
                 if (!response.ok) {
@@ -821,6 +846,7 @@
                 
                 localStorage.setItem('lastViewedScan', scanId);
                 
+                hideLoading();
                 renderOverview();
                 renderFindings();
                 applyFilters();
@@ -840,28 +866,35 @@
             const scores = currentScan.scores;
             const summary = currentScan.summary || {};
             
-            // Grade display
+            // Grade display - with null checks
             const gradeLetter = document.getElementById('gradeLetter');
             const gradeScore = document.getElementById('gradeScore');
             const scanMeta = document.getElementById('scanMeta');
             
-            gradeLetter.textContent = scores.grade;
-            gradeLetter.style.color = getGradeColor(scores.grade);
-            gradeScore.textContent = `${scores.weighted_overall.toFixed(1)}/100`;
+            if (gradeLetter) gradeLetter.textContent = scores.grade;
+            if (gradeLetter) gradeLetter.style.color = getGradeColor(scores.grade);
+            if (gradeScore) gradeScore.textContent = `${scores.weighted_overall.toFixed(1)}/100`;
             
             const scanDate = new Date(currentScan.completed_at).toLocaleString();
             const target = currentScan.target || 'N/A';
             const host = currentScan.host || 'N/A';
-            scanMeta.innerHTML = `${scanDate}<br>Target: ${target}<br>Host: ${host}`;
+            if (scanMeta) scanMeta.innerHTML = `${scanDate}<br>Target: ${target}<br>Host: ${host}`;
             
-            // Summary stats
+            // Summary stats - with null checks
             const bySeverity = summary.by_severity || {};
-            document.getElementById('totalFindings').textContent = summary.total_findings || 0;
-            document.getElementById('criticalCount').textContent = bySeverity.critical || 0;
-            document.getElementById('highCount').textContent = bySeverity.high || 0;
-            document.getElementById('mediumCount').textContent = bySeverity.medium || 0;
-            document.getElementById('lowCount').textContent = bySeverity.low || 0;
-            document.getElementById('infoCount').textContent = bySeverity.info || 0;
+            const totalFindings = document.getElementById('totalFindings');
+            const criticalCount = document.getElementById('criticalCount');
+            const highCount = document.getElementById('highCount');
+            const mediumCount = document.getElementById('mediumCount');
+            const lowCount = document.getElementById('lowCount');
+            const infoCount = document.getElementById('infoCount');
+            
+            if (totalFindings) totalFindings.textContent = summary.total_findings || 0;
+            if (criticalCount) criticalCount.textContent = bySeverity.critical || 0;
+            if (highCount) highCount.textContent = bySeverity.high || 0;
+            if (mediumCount) mediumCount.textContent = bySeverity.medium || 0;
+            if (lowCount) lowCount.textContent = bySeverity.low || 0;
+            if (infoCount) infoCount.textContent = bySeverity.info || 0;
             
             // Domain scores chart
             renderDomainScoresChart(scores);
@@ -872,7 +905,10 @@
 
         // Render domain scores chart
         function renderDomainScoresChart(scores) {
-            const ctx = document.getElementById('domainScoresChart').getContext('2d');
+            const canvas = document.getElementById('domainScoresChart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
             
             if (domainScoresChart) {
                 domainScoresChart.destroy();
@@ -933,6 +969,8 @@
         // Render OWASP coverage
         function renderOwaspCoverage() {
             const owaspGrid = document.getElementById('owaspGrid');
+            if (!owaspGrid) return;
+            
             const coverage = currentScan.owasp_coverage || [];
             
             if (coverage.length === 0) {
@@ -955,6 +993,7 @@
         // Render findings table
         function renderFindings() {
             const tbody = document.getElementById('findingsTableBody');
+            if (!tbody) return;
             
             if (filteredFindings.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="no-data">No findings match the current filters</td></tr>';
@@ -1048,7 +1087,7 @@
             const title = document.getElementById('drawerTitle');
             const content = document.getElementById('drawerContent');
             
-            title.textContent = finding.title;
+            if (title) title.textContent = finding.title;
             
             let html = `
                 <div class="detail-section">
@@ -1349,17 +1388,18 @@
             return div.innerHTML;
         }
 
-        function showLoading(tab) {
-            const content = document.getElementById(tab);
-            content.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading scan data...</p>
-                </div>
-            `;
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.add('hidden');
         }
 
         function showEmptyState(tab, message) {
+            hideLoading();
             const content = document.getElementById(tab);
             content.innerHTML = `
                 <div class="empty-state">
@@ -1370,6 +1410,7 @@
         }
 
         function showError(tab, message) {
+            hideLoading();
             const content = document.getElementById(tab);
             content.innerHTML = `
                 <div class="empty-state">
