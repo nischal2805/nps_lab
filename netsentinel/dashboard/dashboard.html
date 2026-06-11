@@ -86,22 +86,20 @@
     .h-logo {
       display: flex;
       align-items: center;
-      gap: .6rem;
-      font-size: 1.1rem;
-      font-weight: 800;
-      color: var(--text);
       text-decoration: none;
       flex-shrink: 0;
     }
 
-    .logo-gem {
-      width: 30px; height: 30px;
-      background: linear-gradient(135deg, var(--accent), #00cc55);
-      border-radius: 7px;
-      display: grid;
-      place-items: center;
-      font-size: .95rem;
-      box-shadow: 0 0 14px var(--accent-glow);
+    .h-logo-img {
+      height: 34px;
+      width: auto;
+      filter: drop-shadow(0 0 7px rgba(0,255,110,.48));
+      transition: filter .25s, transform .25s;
+    }
+
+    .h-logo:hover .h-logo-img {
+      filter: drop-shadow(0 0 14px rgba(0,255,110,.8));
+      transform: scale(1.05);
     }
 
     .h-scan-info {
@@ -1024,8 +1022,7 @@
   <!-- Header -->
   <header class="header">
     <a href="/" class="h-logo">
-      <div class="logo-gem">⚡</div>
-      NetSentinel
+      <img src="/logo.png" alt="NetSentinel" class="h-logo-img">
     </a>
     <div class="h-scan-info" id="scan-info">
       <span id="scan-meta-text" style="color:var(--text3)">No scan loaded</span>

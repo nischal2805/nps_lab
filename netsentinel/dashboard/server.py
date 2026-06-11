@@ -46,6 +46,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif path == '/dashboard' or path == '/dashboard.html':
             self._serve_file('dashboard.html')
 
+        # Route: GET /logo.png - serve logo image
+        elif path == '/logo.png':
+            self._serve_image('logo.png', 'image/png')
+
         # All other paths: 404
         else:
             self._send_404()
@@ -103,6 +107,24 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.log_error(error_msg)
             self._send_json_response({'error': error_msg}, 500)
     
+    def _serve_image(self, filename: str, content_type: str):
+        """Serve a binary image file from the dashboard directory."""
+        img_file = Path(self.directory) / filename
+        try:
+            if not img_file.exists():
+                self._send_404()
+                return
+            with open(img_file, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=86400')
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            self._send_404()
+
     def _serve_file(self, filename: str):
         """Serve a named HTML file from the dashboard directory."""
         html_file = Path(self.directory) / filename

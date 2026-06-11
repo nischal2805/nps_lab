@@ -61,22 +61,39 @@
     .nav-logo {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--text-bright);
       text-decoration: none;
-      letter-spacing: -0.02em;
+      flex-shrink: 0;
     }
 
-    .logo-icon {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg, var(--accent), #00cc55);
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      font-size: 1.1rem;
-      box-shadow: 0 0 18px var(--accent-soft);
+    .nav-logo-img {
+      height: 38px;
+      width: auto;
+      filter: drop-shadow(0 0 8px rgba(0,255,110,.5));
+      transition: filter .25s, transform .25s;
+    }
+
+    .nav-logo:hover .nav-logo-img {
+      filter: drop-shadow(0 0 18px rgba(0,255,110,.85));
+      transform: scale(1.05);
+    }
+
+    /* hero logo */
+    .hero-logo-wrap {
+      margin-bottom: 1.75rem;
+    }
+
+    .hero-logo-img {
+      height: 170px;
+      width: auto;
+      filter:
+        drop-shadow(0 0 28px rgba(0,255,110,.55))
+        drop-shadow(0 0 60px rgba(0,255,110,.22));
+      animation: logo-float 5s ease-in-out infinite;
+    }
+
+    @keyframes logo-float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-10px); }
     }
 
     .nav-links {
@@ -646,8 +663,7 @@
 <!-- NAV -->
 <nav class="nav">
   <a href="/" class="nav-logo">
-    <div class="logo-icon">⚡</div>
-    NetSentinel
+    <img src="/logo.png" alt="NetSentinel" class="nav-logo-img">
   </a>
   <div class="nav-links">
     <a href="#features">Features</a>
@@ -660,8 +676,10 @@
 <!-- HERO -->
 <section class="hero">
   <div class="hero-content">
+    <div class="hero-logo-wrap">
+      <img src="/logo.png" alt="NetSentinel" class="hero-logo-img">
+    </div>
     <div class="hero-badge">Network Security Intelligence</div>
-    <h1>Net<span class="grad-text">Sentinel</span></h1>
     <p class="hero-desc">
       Advanced security auditing combining static code analysis, live network probing,
       and CVSS&nbsp;3.1 scoring — into one unified platform.
