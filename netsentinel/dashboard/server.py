@@ -38,10 +38,14 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             scan_id = path.split('/api/scans/')[-1]
             self._handle_get_scan(scan_id)
         
-        # Route: GET / - serve dashboard.html
+        # Route: GET / - serve landing page
         elif path == '/' or path == '/index.html':
-            self._serve_dashboard()
-        
+            self._serve_file('landing.html')
+
+        # Route: GET /dashboard - serve dashboard
+        elif path == '/dashboard' or path == '/dashboard.html':
+            self._serve_file('dashboard.html')
+
         # All other paths: 404
         else:
             self._send_404()
@@ -99,13 +103,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.log_error(error_msg)
             self._send_json_response({'error': error_msg}, 500)
     
-    def _serve_dashboard(self):
-        """Serve the dashboard.html file."""
-        dashboard_file = Path(self.directory) / 'dashboard.html'
-        
+    def _serve_file(self, filename: str):
+        """Serve a named HTML file from the dashboard directory."""
+        html_file = Path(self.directory) / filename
+
         try:
-            if not dashboard_file.exists():
-                error_msg = "dashboard.html not found"
+            if not html_file.exists():
+                error_msg = f"{filename} not found"
                 self.log_error(error_msg)
                 self._send_text_response(
                     f"<h1>Error</h1><p>{error_msg}</p>",
@@ -113,14 +117,14 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     'text/html'
                 )
                 return
-            
-            with open(dashboard_file, 'r', encoding='utf-8') as f:
+
+            with open(html_file, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             self._send_text_response(content, 200, 'text/html')
-        
+
         except Exception as e:
-            error_msg = f"Error serving dashboard: {str(e)}"
+            error_msg = f"Error serving {filename}: {str(e)}"
             self.log_error(error_msg)
             self._send_text_response(
                 f"<h1>Error</h1><p>{error_msg}</p>",

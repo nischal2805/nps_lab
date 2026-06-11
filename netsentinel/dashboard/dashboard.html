@@ -1,1431 +1,1651 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSentinel Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #2a2a2a;
-            --bg-tertiary: #3a3a3a;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0b0;
-            --border-color: #404040;
-            --critical: #d32f2f;
-            --high: #f57c00;
-            --medium: #fbc02d;
-            --low: #388e3c;
-            --info: #1976d2;
-            --grade-a: #4caf50;
-            --grade-b: #8bc34a;
-            --grade-c: #fbc02d;
-            --grade-d: #f57c00;
-            --grade-f: #d32f2f;
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            background: var(--bg-secondary);
-            padding: 20px 0;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow);
-        }
-
-        h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--info), var(--low));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.3s;
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .tab.active {
-            color: var(--info);
-            border-bottom-color: var(--info);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .overview-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-        }
-
-        .card h2 {
-            font-size: 1.2rem;
-            margin-bottom: 16px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .grade-display {
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .grade-letter {
-            font-size: 6rem;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 10px;
-        }
-
-        .grade-score {
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-
-        .stat {
-            text-align: center;
-            padding: 12px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            line-height: 1;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-
-        .severity-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .severity-critical { background: var(--critical); color: white; }
-        .severity-high { background: var(--high); color: white; }
-        .severity-medium { background: var(--medium); color: #000; }
-        .severity-low { background: var(--low); color: white; }
-        .severity-info { background: var(--info); color: white; }
-
-        .owasp-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 12px;
-        }
-
-        .owasp-item {
-            padding: 16px 12px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .owasp-item.fail {
-            border-color: var(--critical);
-            background: rgba(211, 47, 47, 0.1);
-        }
-
-        .owasp-item.pass {
-            border-color: var(--low);
-            background: rgba(56, 142, 60, 0.1);
-        }
-
-        .owasp-id {
-            font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-        }
-
-        .owasp-count {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .filters {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .filter-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        select, input[type="search"] {
-            padding: 8px 12px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            min-width: 150px;
-        }
-
-        input[type="search"] {
-            min-width: 250px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        th {
-            background: var(--bg-tertiary);
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        th:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        th.sortable::after {
-            content: ' ⇅';
-            opacity: 0.3;
-        }
-
-        th.sort-asc::after {
-            content: ' ↑';
-            opacity: 1;
-        }
-
-        th.sort-desc::after {
-            content: ' ↓';
-            opacity: 1;
-        }
-
-        td {
-            padding: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        tr {
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        tbody tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .drawer {
-            position: fixed;
-            top: 0;
-            right: -500px;
-            width: 500px;
-            height: 100vh;
-            background: var(--bg-secondary);
-            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
-            transition: right 0.3s;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .drawer.open {
-            right: 0;
-        }
-
-        .drawer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background: var(--bg-tertiary);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .drawer-content {
-            padding: 20px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .close-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .detail-section {
-            margin-bottom: 24px;
-        }
-
-        .detail-section h3 {
-            font-size: 1rem;
-            margin-bottom: 8px;
-            color: var(--info);
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .detail-section p {
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .cvss-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        .cvss-item {
-            background: var(--bg-tertiary);
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        .cvss-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .cvss-value {
-            font-weight: 600;
-        }
-
-        .evidence-block {
-            background: var(--bg-tertiary);
-            padding: 12px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .compare-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .compare-controls {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            align-items: end;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(26, 26, 26, 0.8);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .loading-overlay.hidden {
-            display: none;
-        }
-
-        .spinner {
-            border: 3px solid var(--border-color);
-            border-top: 3px solid var(--info);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .reference-link {
-            color: var(--info);
-            text-decoration: none;
-            word-break: break-all;
-        }
-
-        .reference-link:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 768px) {
-            .drawer {
-                width: 100%;
-                right: -100%;
-            }
-
-            .overview-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .compare-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .compare-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .filters {
-                flex-direction: column;
-            }
-
-            input[type="search"], select {
-                min-width: 100%;
-            }
-        }
-
-        .scan-meta {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-top: 8px;
-        }
-
-        .diff-indicator {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-
-        .diff-new {
-            background: var(--critical);
-            color: white;
-        }
-
-        .diff-improved {
-            background: var(--low);
-            color: white;
-        }
-
-        .diff-regression {
-            background: var(--high);
-            color: white;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetSentinel Dashboard</title>
+  <style>
+    /* ── TOKENS ──────────────────────────────────────────────────── */
+    :root {
+      --bg:           #010804;
+      --bg2:          #030f07;
+      --bg3:          #061510;
+      --glass:        rgba(3, 16, 8, 0.80);
+      --glass2:       rgba(0, 22, 10, 0.60);
+      --gb:           rgba(0, 255, 100, 0.16);
+      --gb2:          rgba(0, 255, 100, 0.10);
+      --accent:       #00ff6e;
+      --accent2:      #10b981;
+      --accent-glow:  rgba(0, 255, 100, 0.38);
+      --accent-sub:   rgba(0, 255, 100, 0.10);
+      --text:         #dfffed;
+      --text2:        #8dc9a8;
+      --text3:        #3d7057;
+      --critical:     #ff3344;
+      --high:         #ff8800;
+      --medium:       #ffc300;
+      --low:          #00ff6e;
+      --info:         #00ccff;
+      --crit-bg:      rgba(255,51,68,.12);
+      --high-bg:      rgba(255,136,0,.12);
+      --med-bg:       rgba(255,195,0,.12);
+      --low-bg:       rgba(0,255,110,.10);
+      --info-bg:      rgba(0,204,255,.10);
+      --grade-a:      #00ff6e;
+      --grade-b:      #10b981;
+      --grade-c:      #ffc300;
+      --grade-d:      #ff8800;
+      --grade-f:      #ff3344;
+      --radius:       14px;
+      --radius-sm:    8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── CANVAS BG ───────────────────────────────────────────────── */
+    #dash-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .55;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────────────── */
+    .layout {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: .8rem 2rem;
+      background: rgba(1, 8, 4, 0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--gb);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .h-logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-gem {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--accent), #00cc55);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: .95rem;
+      box-shadow: 0 0 14px var(--accent-glow);
+    }
+
+    .h-scan-info {
+      flex: 1;
+      font-size: .8rem;
+      color: var(--text3);
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .h-scan-info span { color: var(--text2); }
+
+    .h-actions {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      flex-shrink: 0;
+    }
+
+    .btn-sm {
+      padding: .42rem .9rem;
+      background: var(--glass2);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-size: .78rem;
+      cursor: pointer;
+      transition: all .2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+    }
+
+    .btn-sm:hover {
+      border-color: var(--accent-glow);
+      color: var(--accent);
+      background: var(--accent-sub);
+    }
+
+    .btn-accent {
+      padding: .5rem 1.2rem;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #010804;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      text-decoration: none;
+    }
+
+    .btn-accent:hover {
+      background: #30ffa0;
+      box-shadow: 0 0 18px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    /* ── TABS ────────────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 2rem;
+      background: rgba(1,8,4,.6);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--gb);
+      overflow-x: auto;
+    }
+
+    .tab-bar::-webkit-scrollbar { height: 2px; }
+    .tab-bar::-webkit-scrollbar-thumb { background: var(--gb); }
+
+    .tab-btn {
+      padding: .9rem 1.4rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text3);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .tab-btn:hover { color: var(--text2); }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-count {
+      display: inline-block;
+      padding: .1rem .4rem;
+      background: var(--accent-sub);
+      border-radius: 100px;
+      font-size: .68rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ── MAIN CONTENT ────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      padding: 1.75rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-panel { display: none; animation: fadeIn .35s ease; }
+    .tab-panel.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ── GLASS CARD ──────────────────────────────────────────────── */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .card-title {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: .9rem;
+    }
+
+    /* ── OVERVIEW ────────────────────────────────────────────────── */
+    .ov-top {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Grade */
+    .grade-card {
+      padding: 2rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      min-width: 200px;
+    }
+
+    .grade-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 40%, var(--grade-glow, rgba(0,255,110,.12)) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .grade-letter {
+      font-size: 5.5rem;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--grade-col, var(--accent));
+      text-shadow: 0 0 40px var(--grade-glow, var(--accent-glow)), 0 0 80px var(--grade-glow, var(--accent-glow));
+      transform: perspective(400px) rotateX(8deg);
+      display: block;
+      letter-spacing: -.04em;
+    }
+
+    .grade-score {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text2);
+    }
+
+    .grade-label {
+      font-size: .72rem;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+
+    /* Severity summary */
+    .sev-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: .9rem;
+    }
+
+    .sev-card {
+      padding: 1.2rem 1rem;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid;
+      backdrop-filter: blur(16px);
+    }
+
+    .sev-card.critical { background: var(--crit-bg); border-color: rgba(255,51,68,.25); }
+    .sev-card.high     { background: var(--high-bg);  border-color: rgba(255,136,0,.25); }
+    .sev-card.medium   { background: var(--med-bg);   border-color: rgba(255,195,0,.25); }
+    .sev-card.low      { background: var(--low-bg);   border-color: rgba(0,255,110,.2);  }
+    .sev-card.info     { background: var(--info-bg);  border-color: rgba(0,204,255,.2);  }
+
+    .sev-num {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .sev-card.critical .sev-num { color: var(--critical); }
+    .sev-card.high     .sev-num { color: var(--high);     }
+    .sev-card.medium   .sev-num { color: var(--medium);   }
+    .sev-card.low      .sev-num { color: var(--low);      }
+    .sev-card.info     .sev-num { color: var(--info);     }
+
+    .sev-lbl {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+    }
+
+    /* Domain scores */
+    .domain-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .domain-card {
+      padding: 1.4rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .7rem;
+      transition: all .3s;
+    }
+
+    .domain-card:hover {
+      border-color: rgba(0,255,100,.3);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 36px rgba(0,0,0,.4);
+    }
+
+    .domain-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .domain-icon { font-size: 1.3rem; }
+
+    .domain-score {
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .domain-name {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .domain-bar-track {
+      height: 5px;
+      background: rgba(255,255,255,.06);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .domain-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+    }
+
+    /* OWASP */
+    .owasp-section { margin-bottom: 1.25rem; padding: 1.4rem; }
+
+    .owasp-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: .7rem;
+    }
+
+    .ow-item {
+      padding: .9rem .8rem;
+      border-radius: 10px;
+      border: 1px solid var(--gb);
+      background: var(--glass2);
+      transition: all .2s;
+    }
+
+    .ow-item.pass {
+      border-color: rgba(0,255,110,.25);
+      background: rgba(0,255,110,.05);
+    }
+
+    .ow-item.fail {
+      border-color: rgba(255,51,68,.25);
+      background: rgba(255,51,68,.06);
+    }
+
+    .ow-item:hover { transform: translateY(-2px); }
+
+    .ow-id {
+      font-size: .65rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      margin-bottom: .3rem;
+    }
+
+    .ow-item.pass .ow-id { color: var(--accent); }
+    .ow-item.fail .ow-id { color: var(--critical); }
+    .ow-item.neutral .ow-id { color: var(--text3); }
+
+    .ow-name { font-size: .7rem; color: var(--text2); line-height: 1.35; }
+
+    .ow-status {
+      margin-top: .4rem;
+      font-size: .62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .ow-item.pass .ow-status { color: var(--accent); }
+    .ow-item.fail .ow-status { color: var(--critical); }
+    .ow-item.neutral .ow-status { color: var(--text3); }
+
+    /* ── FINDINGS TAB ────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      align-items: center;
+    }
+
+    .filter-select, .filter-input {
+      padding: .5rem .9rem;
+      background: var(--glass);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: .82rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .filter-select:focus, .filter-input:focus { border-color: var(--accent-glow); }
+    .filter-input { flex: 1; min-width: 180px; }
+
+    option { background: #061510; }
+
+    .findings-count {
+      margin-left: auto;
+      font-size: .78rem;
+      color: var(--text3);
+    }
+
+    .table-wrap {
+      border-radius: var(--radius);
+      overflow: auto;
+      border: 1px solid var(--gb);
+      background: var(--glass);
+    }
+
+    table.findings {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .83rem;
+    }
+
+    .findings thead th {
+      padding: .9rem 1rem;
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+      background: rgba(0,0,0,.3);
+      border-bottom: 1px solid var(--gb);
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .findings thead th:hover { color: var(--accent); }
+    .findings thead th.sort-asc  .sort-icon::after { content: ' ↑'; color: var(--accent); }
+    .findings thead th.sort-desc .sort-icon::after { content: ' ↓'; color: var(--accent); }
+    .sort-icon { opacity: .4; font-size: .7rem; }
+
+    .findings tbody tr {
+      border-bottom: 1px solid rgba(0,255,100,.05);
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .findings tbody tr:last-child { border-bottom: none; }
+    .findings tbody tr:hover { background: rgba(0,255,100,.04); }
+
+    .findings td {
+      padding: .85rem 1rem;
+      vertical-align: middle;
+    }
+
+    .finding-title {
+      font-weight: 600;
+      color: var(--text);
+      max-width: 340px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sev-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .22rem .65rem;
+      border-radius: 100px;
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+
+    .sev-badge.critical { background: var(--crit-bg); color: var(--critical); border: 1px solid rgba(255,51,68,.3); }
+    .sev-badge.high     { background: var(--high-bg);  color: var(--high);     border: 1px solid rgba(255,136,0,.3); }
+    .sev-badge.medium   { background: var(--med-bg);   color: var(--medium);   border: 1px solid rgba(255,195,0,.3); }
+    .sev-badge.low      { background: var(--low-bg);   color: var(--low);      border: 1px solid rgba(0,255,110,.25);}
+    .sev-badge.info     { background: var(--info-bg);  color: var(--info);     border: 1px solid rgba(0,204,255,.25);}
+
+    .domain-badge {
+      display: inline-block;
+      padding: .18rem .55rem;
+      background: var(--glass2);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      font-size: .68rem;
+      color: var(--text2);
+      text-transform: uppercase;
+    }
+
+    .cvss-score { font-weight: 700; font-size: .9rem; }
+
+    .owasp-tag {
+      display: inline-block;
+      padding: .15rem .5rem;
+      background: rgba(0,204,255,.08);
+      border: 1px solid rgba(0,204,255,.2);
+      border-radius: var(--radius-sm);
+      font-size: .68rem;
+      color: var(--info);
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text3);
+    }
+
+    .empty-state .es-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    .empty-state .es-title { font-size: 1rem; font-weight: 600; color: var(--text2); margin-bottom: .4rem; }
+
+    /* ── DRAWER ──────────────────────────────────────────────────── */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 400;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: min(560px, 95vw);
+      height: 100%;
+      background: rgba(2, 12, 6, 0.97);
+      border-left: 1px solid var(--gb);
+      backdrop-filter: blur(30px);
+      z-index: 500;
+      transform: translateX(100%);
+      transition: transform .35s cubic-bezier(.22,1,.36,1);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .drawer.open { transform: none; }
+
+    .drawer::-webkit-scrollbar { width: 4px; }
+    .drawer::-webkit-scrollbar-thumb { background: var(--gb); border-radius: 2px; }
+
+    .drawer-header {
+      padding: 1.5rem 1.75rem 1.25rem;
+      border-bottom: 1px solid var(--gb);
+      position: sticky;
+      top: 0;
+      background: rgba(2,12,6,.98);
+      z-index: 1;
+    }
+
+    .drawer-close {
+      position: absolute;
+      top: 1.2rem; right: 1.5rem;
+      width: 30px; height: 30px;
+      background: var(--glass2);
+      border: 1px solid var(--gb);
+      border-radius: 50%;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: .9rem;
+      display: grid;
+      place-items: center;
+      transition: all .2s;
+    }
+
+    .drawer-close:hover { background: var(--accent-sub); color: var(--accent); border-color: var(--accent-glow); }
+
+    .drawer-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .6rem;
+      padding-right: 2.5rem;
+      line-height: 1.4;
+    }
+
+    .drawer-badges { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+    .drawer-body {
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    .d-section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text3);
+      margin-bottom: .7rem;
+    }
+
+    .cvss-box {
+      background: var(--glass2);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .cvss-score-main {
+      padding: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid var(--gb);
+    }
+
+    .cvss-big {
+      font-size: 2.4rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .cvss-vector-text {
+      font-family: 'Courier New', monospace;
+      font-size: .7rem;
+      color: var(--text3);
+      word-break: break-all;
+    }
+
+    .cvss-breakdown-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .cvss-metric {
+      padding: .6rem .9rem;
+      border-right: 1px solid var(--gb);
+      border-bottom: 1px solid var(--gb);
+    }
+
+    .cvss-metric:nth-child(even) { border-right: none; }
+
+    .cvss-metric-name {
+      font-size: .65rem;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .2rem;
+    }
+
+    .cvss-metric-val {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .evidence-box {
+      background: rgba(0,0,0,.4);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: .73rem;
+      color: var(--text2);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .evidence-box::-webkit-scrollbar { width: 3px; }
+    .evidence-box::-webkit-scrollbar-thumb { background: var(--gb); }
+
+    .remediation-box {
+      background: rgba(0,255,110,.04);
+      border: 1px solid rgba(0,255,110,.18);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+      font-size: .85rem;
+      color: var(--text2);
+      line-height: 1.65;
+    }
+
+    /* ── HISTORY TAB ─────────────────────────────────────────────── */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+
+    .hist-card {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.2rem 1.5rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--gb);
+      background: var(--glass);
+      cursor: pointer;
+      transition: all .25s;
+    }
+
+    .hist-card:hover {
+      border-color: rgba(0,255,100,.3);
+      background: rgba(0,255,100,.03);
+      transform: translateX(4px);
+    }
+
+    .hist-grade {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 1.5rem;
+      font-weight: 900;
+      flex-shrink: 0;
+      border: 2px solid;
+    }
+
+    .hist-grade[data-grade="A"] { color: var(--grade-a); border-color: var(--grade-a); background: rgba(0,255,110,.1); }
+    .hist-grade[data-grade="B"] { color: var(--grade-b); border-color: var(--grade-b); background: rgba(16,185,129,.1); }
+    .hist-grade[data-grade="C"] { color: var(--grade-c); border-color: var(--grade-c); background: rgba(255,195,0,.1); }
+    .hist-grade[data-grade="D"] { color: var(--grade-d); border-color: var(--grade-d); background: rgba(255,136,0,.1); }
+    .hist-grade[data-grade="F"] { color: var(--grade-f); border-color: var(--grade-f); background: rgba(255,51,68,.1); }
+
+    .hist-info { flex: 1; }
+
+    .hist-host {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .2rem;
+    }
+
+    .hist-meta {
+      font-size: .75rem;
+      color: var(--text3);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hist-meta span { color: var(--text2); }
+
+    .hist-findings { text-align: right; flex-shrink: 0; }
+    .hist-findings .num { font-size: 1.3rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .hist-findings .lbl { font-size: .68rem; color: var(--text3); }
+
+    /* ── COMPARE TAB ─────────────────────────────────────────────── */
+    .compare-selectors {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1.75rem;
+      padding: 1.5rem;
+    }
+
+    .compare-vs {
+      text-align: center;
+      font-weight: 700;
+      color: var(--text3);
+      font-size: .85rem;
+    }
+
+    .cmp-select {
+      width: 100%;
+      padding: .65rem 1rem;
+      background: var(--glass2);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: .85rem;
+      outline: none;
+    }
+
+    .cmp-select:focus { border-color: var(--accent-glow); }
+
+    .compare-run { text-align: center; margin-bottom: 1.5rem; }
+
+    .cmp-result {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .cmp-col {
+      background: var(--glass);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .cmp-col-title {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 1rem;
+    }
+
+    .cmp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .5rem 0;
+      border-bottom: 1px solid rgba(0,255,100,.05);
+      font-size: .85rem;
+    }
+
+    .cmp-row:last-child { border-bottom: none; }
+    .cmp-row .lbl { color: var(--text3); }
+    .cmp-row .val { font-weight: 700; color: var(--text); }
+
+    .delta {
+      font-size: .75rem;
+      font-weight: 700;
+      padding: .15rem .4rem;
+      border-radius: 4px;
+    }
+
+    .delta.pos { background: rgba(0,255,110,.1); color: var(--accent); }
+    .delta.neg { background: rgba(255,51,68,.1);  color: var(--critical); }
+    .delta.neu { background: var(--glass2); color: var(--text3); }
+
+    /* ── LOADING ─────────────────────────────────────────────────── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(1,8,4,.85);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .loading-overlay.hidden { display: none; }
+
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(0,255,110,.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: .85rem; color: var(--text3); }
+
+    /* ── NO SCAN ─────────────────────────────────────────────────── */
+    .no-scan {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      gap: 1rem;
+    }
+
+    .no-scan .ns-icon { font-size: 3.5rem; }
+    .no-scan .ns-title { font-size: 1.3rem; font-weight: 700; color: var(--text2); }
+    .no-scan .ns-desc { font-size: .88rem; color: var(--text3); max-width: 400px; }
+
+    .code-block {
+      background: rgba(0,0,0,.5);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      padding: .9rem 1.2rem;
+      font-family: 'Courier New', monospace;
+      font-size: .82rem;
+      color: var(--accent);
+    }
+
+    .scan-selector {
+      padding: .48rem .9rem;
+      background: var(--glass);
+      border: 1px solid var(--gb);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: .8rem;
+      outline: none;
+      cursor: pointer;
+      max-width: 260px;
+    }
+
+    .scan-selector:focus { border-color: var(--accent-glow); }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .ov-top { grid-template-columns: 1fr; }
+      .domain-row { grid-template-columns: repeat(2, 1fr); }
+      .cmp-result { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .main { padding: 1.25rem 1rem; }
+      .header { padding: .7rem 1rem; }
+      .tab-bar { padding: 0 .5rem; }
+      .domain-row { grid-template-columns: 1fr 1fr; }
+      .compare-selectors { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>
-                <div class="logo">NS</div>
-                NetSentinel Dashboard
-            </h1>
+
+<!-- Canvas background -->
+<canvas id="dash-canvas"></canvas>
+
+<!-- Loading overlay -->
+<div id="loading" class="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading scan data…</div>
+</div>
+
+<!-- Drawer overlay -->
+<div id="drawer-overlay" class="drawer-overlay" onclick="closeDrawer()"></div>
+
+<!-- Finding drawer -->
+<div id="finding-drawer" class="drawer">
+  <div class="drawer-header">
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    <div class="drawer-title" id="drawer-title">Finding Details</div>
+    <div class="drawer-badges" id="drawer-badges"></div>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="h-logo">
+      <div class="logo-gem">⚡</div>
+      NetSentinel
+    </a>
+    <div class="h-scan-info" id="scan-info">
+      <span id="scan-meta-text" style="color:var(--text3)">No scan loaded</span>
+    </div>
+    <div class="h-actions">
+      <select class="scan-selector" id="scan-selector" onchange="handleScanSelect(this.value)">
+        <option value="">Loading…</option>
+      </select>
+      <button class="btn-sm" onclick="loadScans()">↺ Refresh</button>
+      <a href="/" class="btn-sm">← Home</a>
+    </div>
+  </header>
+
+  <!-- Tab bar -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="findings">
+      Findings <span class="tab-count" id="findings-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="history">History</button>
+    <button class="tab-btn" data-tab="compare">Compare</button>
+  </nav>
+
+  <!-- Content -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="tab-panel active">
+      <div id="ov-content">
+        <div class="no-scan">
+          <div class="ns-icon">🛡️</div>
+          <div class="ns-title">No scan selected</div>
+          <p class="ns-desc">Run a scan with the CLI then select it from the dropdown above, or click a scan in the History tab.</p>
+          <div class="code-block">netsentinel scan --host example.com</div>
         </div>
-    </header>
-
-    <div class="container">
-        <div class="tabs">
-            <button class="tab active" data-tab="overview">Overview</button>
-            <button class="tab" data-tab="findings">Findings</button>
-            <button class="tab" data-tab="history">History</button>
-            <button class="tab" data-tab="compare">Compare</button>
-        </div>
-
-        <!-- Overview Tab -->
-        <div id="overview" class="tab-content active">
-            <div class="overview-grid">
-                <div class="card">
-                    <div class="grade-display">
-                        <div class="grade-letter" id="gradeLetter">-</div>
-                        <div class="grade-score" id="gradeScore">-</div>
-                        <div class="scan-meta" id="scanMeta"></div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Summary Statistics</h2>
-                    <div class="stats-grid">
-                        <div class="stat">
-                            <div class="stat-value" id="totalFindings">0</div>
-                            <div class="stat-label">Total Findings</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value severity-critical" id="criticalCount">0</div>
-                            <div class="stat-label">Critical</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value severity-high" id="highCount">0</div>
-                            <div class="stat-label">High</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value severity-medium" id="mediumCount">0</div>
-                            <div class="stat-label">Medium</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value severity-low" id="lowCount">0</div>
-                            <div class="stat-label">Low</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value severity-info" id="infoCount">0</div>
-                            <div class="stat-label">Info</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Domain Scores</h2>
-                <div class="chart-container">
-                    <canvas id="domainScoresChart"></canvas>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 20px;">
-                <h2>OWASP Top 10 Coverage</h2>
-                <div class="owasp-grid" id="owaspGrid">
-                    <div class="no-data">No OWASP data available</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Findings Tab -->
-        <div id="findings" class="tab-content">
-            <div class="filters">
-                <div class="filter-group">
-                    <label class="filter-label">Severity</label>
-                    <select id="severityFilter">
-                        <option value="">All Severities</option>
-                        <option value="critical">Critical</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                        <option value="info">Info</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Domain</label>
-                    <select id="domainFilter">
-                        <option value="">All Domains</option>
-                        <option value="network">Network</option>
-                        <option value="tls">TLS</option>
-                        <option value="http">HTTP</option>
-                        <option value="dns">DNS</option>
-                        <option value="static">Static</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Search</label>
-                    <input type="search" id="searchBox" placeholder="Search findings...">
-                </div>
-            </div>
-
-            <table id="findingsTable">
-                <thead>
-                    <tr>
-                        <th class="sortable" data-sort="severity">Severity</th>
-                        <th class="sortable" data-sort="domain">Domain</th>
-                        <th class="sortable" data-sort="title">Title</th>
-                        <th class="sortable" data-sort="cvss_score">CVSS</th>
-                        <th class="sortable" data-sort="owasp_id">OWASP</th>
-                    </tr>
-                </thead>
-                <tbody id="findingsTableBody">
-                    <tr>
-                        <td colspan="5" class="no-data">No findings to display</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- History Tab -->
-        <div id="history" class="tab-content">
-            <div class="card">
-                <h2>Scan History</h2>
-                <table id="historyTable">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Target</th>
-                            <th>Host</th>
-                            <th>Grade</th>
-                            <th>Findings</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody">
-                        <tr>
-                            <td colspan="5" class="no-data">No scan history available</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Compare Tab -->
-        <div id="compare" class="tab-content">
-            <div class="compare-controls">
-                <div class="filter-group">
-                    <label class="filter-label">Scan 1</label>
-                    <select id="compareScan1">
-                        <option value="">Select a scan</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Scan 2</label>
-                    <select id="compareScan2">
-                        <option value="">Select a scan</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="compare-grid" id="compareGrid">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <p>Select two scans to compare</p>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay hidden" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p>Loading scan data...</p>
+    <!-- FINDINGS -->
+    <div id="tab-findings" class="tab-panel">
+      <div id="findings-content">
+        <div class="empty-state">
+          <span class="es-icon">🔍</span>
+          <div class="es-title">No findings to display</div>
+          <p>Select a scan from the dropdown to view findings.</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Side Drawer for Finding Details -->
-    <div class="drawer" id="findingDrawer">
-        <div class="drawer-header">
-            <h2 id="drawerTitle">Finding Details</h2>
-            <button class="close-btn" onclick="closeDrawer()">✕</button>
+    <!-- HISTORY -->
+    <div id="tab-history" class="tab-panel">
+      <div id="history-list" class="history-list">
+        <div class="empty-state">
+          <span class="es-icon">📂</span>
+          <div class="es-title">No scans in history</div>
+          <p>Run your first scan to see results here.</p>
         </div>
-        <div class="drawer-content" id="drawerContent">
-            <!-- Content populated dynamically -->
-        </div>
+      </div>
     </div>
 
-    <script>
-        // Global state
-        let currentScan = null;
-        let allScans = [];
-        let allFindings = [];
-        let filteredFindings = [];
-        let domainScoresChart = null;
-        let sortColumn = 'severity';
-        let sortDirection = 'desc';
+    <!-- COMPARE -->
+    <div id="tab-compare" class="tab-panel">
+      <div class="card compare-selectors">
+        <div>
+          <div class="card-title" style="margin-bottom:.5rem">Scan A</div>
+          <select class="cmp-select" id="cmp-a"><option value="">— Select scan —</option></select>
+        </div>
+        <div class="compare-vs">VS</div>
+        <div>
+          <div class="card-title" style="margin-bottom:.5rem">Scan B</div>
+          <select class="cmp-select" id="cmp-b"><option value="">— Select scan —</option></select>
+        </div>
+      </div>
+      <div class="compare-run">
+        <button class="btn-accent" onclick="performComparison()">⚡ Compare Scans</button>
+      </div>
+      <div id="cmp-result"></div>
+    </div>
 
-        // OWASP categories mapping
-        const owaspCategories = {
-            'A01': 'Broken Access Control',
-            'A02': 'Cryptographic Failures',
-            'A03': 'Injection',
-            'A04': 'Insecure Design',
-            'A05': 'Security Misconfiguration',
-            'A06': 'Vulnerable Components',
-            'A07': 'Authentication Failures',
-            'A08': 'Data Integrity Failures',
-            'A09': 'Logging Failures',
-            'A10': 'SSRF'
-        };
+  </main>
+</div>
 
-        // Severity order for sorting
-        const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+<script>
+// ── CANVAS BACKGROUND ─────────────────────────────────────────────
+(function () {
+  const c = document.getElementById('dash-canvas');
+  const ctx = c.getContext('2d');
+  let W, H;
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', async () => {
-            setupTabs();
-            setupFilters();
-            setupTableSort();
-            await loadScans();
-        });
+  function resize() {
+    W = c.width  = window.innerWidth;
+    H = c.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
 
-        // Tab management
-        function setupTabs() {
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabName = tab.dataset.tab;
-                    switchTab(tabName);
-                });
-            });
+  const pts = Array.from({ length: 55 }, () => ({
+    x:  Math.random() * 1920,
+    y:  Math.random() * 1080,
+    vx: (Math.random() - .5) * .32,
+    vy: (Math.random() - .5) * .26,
+    r:  1.2 + Math.random() * 1.5,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of pts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    }
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < 160) {
+          ctx.strokeStyle = `rgba(0,255,110,${.13*(1-d/160)})`;
+          ctx.lineWidth = .7;
+          ctx.beginPath();
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.stroke();
         }
+      }
+    }
+    for (const p of pts) {
+      ctx.fillStyle = 'rgba(0,255,110,.42)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(tabName).classList.add('active');
-        }
+// ── STATE ─────────────────────────────────────────────────────────
+let currentScan = null;
+let allScans    = [];
+let allFindings = [];
+let sortCol     = 'severity';
+let sortDir     = 'asc';
 
-        // Load all scans
-        async function loadScans() {
-            try {
-                showLoading();
-                const response = await fetch('/api/scans');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                allScans = await response.json();
-                
-                if (allScans.length > 0) {
-                    // Sort by date descending
-                    allScans.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    
-                    // Load most recent scan
-                    const lastScanId = localStorage.getItem('lastViewedScan') || allScans[0].scan_id;
-                    await loadScan(lastScanId);
-                    
-                    // Populate history and compare dropdowns
-                    populateHistory();
-                    populateCompareDropdowns();
-                } else {
-                    hideLoading();
-                    showEmptyState('overview', 'No scans available yet');
-                }
-            } catch (error) {
-                console.error('Error loading scans:', error);
-                showError('overview', `Failed to load scans: ${error.message}`);
-            }
-        }
+const OWASP_NAMES = {
+  A01:'Broken Access Control',    A02:'Cryptographic Failures',
+  A03:'Injection',                A04:'Insecure Design',
+  A05:'Security Misconfiguration',A06:'Vulnerable Components',
+  A07:'Auth Failures',            A08:'Data Integrity Failures',
+  A09:'Logging Failures',         A10:'SSRF',
+};
 
-        // Load a specific scan
-        async function loadScan(scanId) {
-            try {
-                showLoading();
-                const response = await fetch(`/api/scans/${scanId}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                currentScan = await response.json();
-                allFindings = currentScan.findings || [];
-                filteredFindings = [...allFindings];
-                
-                localStorage.setItem('lastViewedScan', scanId);
-                
-                hideLoading();
-                renderOverview();
-                renderFindings();
-                applyFilters();
-            } catch (error) {
-                console.error('Error loading scan:', error);
-                showError('overview', `Failed to load scan: ${error.message}`);
-            }
-        }
+const SEV_ORDER = { critical:0, high:1, medium:2, low:3, info:4 };
 
-        // Render overview tab
-        function renderOverview() {
-            if (!currentScan || !currentScan.scores) {
-                showEmptyState('overview', 'No scan data available');
-                return;
-            }
+// ── TABS ──────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
 
-            const scores = currentScan.scores;
-            const summary = currentScan.summary || {};
-            
-            // Grade display - with null checks
-            const gradeLetter = document.getElementById('gradeLetter');
-            const gradeScore = document.getElementById('gradeScore');
-            const scanMeta = document.getElementById('scanMeta');
-            
-            if (gradeLetter) gradeLetter.textContent = scores.grade;
-            if (gradeLetter) gradeLetter.style.color = getGradeColor(scores.grade);
-            if (gradeScore) gradeScore.textContent = `${scores.weighted_overall.toFixed(1)}/100`;
-            
-            const scanDate = new Date(currentScan.completed_at).toLocaleString();
-            const target = currentScan.target || 'N/A';
-            const host = currentScan.host || 'N/A';
-            if (scanMeta) scanMeta.innerHTML = `${scanDate}<br>Target: ${target}<br>Host: ${host}`;
-            
-            // Summary stats - with null checks
-            const bySeverity = summary.by_severity || {};
-            const totalFindings = document.getElementById('totalFindings');
-            const criticalCount = document.getElementById('criticalCount');
-            const highCount = document.getElementById('highCount');
-            const mediumCount = document.getElementById('mediumCount');
-            const lowCount = document.getElementById('lowCount');
-            const infoCount = document.getElementById('infoCount');
-            
-            if (totalFindings) totalFindings.textContent = summary.total_findings || 0;
-            if (criticalCount) criticalCount.textContent = bySeverity.critical || 0;
-            if (highCount) highCount.textContent = bySeverity.high || 0;
-            if (mediumCount) mediumCount.textContent = bySeverity.medium || 0;
-            if (lowCount) lowCount.textContent = bySeverity.low || 0;
-            if (infoCount) infoCount.textContent = bySeverity.info || 0;
-            
-            // Domain scores chart
-            renderDomainScoresChart(scores);
-            
-            // OWASP coverage
-            renderOwaspCoverage();
-        }
+// ── LOADING ───────────────────────────────────────────────────────
+function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
 
-        // Render domain scores chart
-        function renderDomainScoresChart(scores) {
-            const canvas = document.getElementById('domainScoresChart');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            
-            if (domainScoresChart) {
-                domainScoresChart.destroy();
-            }
-            
-            domainScoresChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Network', 'TLS', 'HTTP', 'DNS'],
-                    datasets: [{
-                        label: 'Score',
-                        data: [scores.network, scores.tls, scores.http, scores.dns],
-                        backgroundColor: [
-                            'rgba(25, 118, 210, 0.8)',
-                            'rgba(56, 142, 60, 0.8)',
-                            'rgba(245, 124, 0, 0.8)',
-                            'rgba(251, 192, 45, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgb(25, 118, 210)',
-                            'rgb(56, 142, 60)',
-                            'rgb(245, 124, 0)',
-                            'rgb(251, 192, 45)'
-                        ],
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: { color: '#b0b0b0' },
-                            grid: { color: '#404040' }
-                        },
-                        y: {
-                            ticks: { color: '#b0b0b0' },
-                            grid: { display: false }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#2a2a2a',
-                            titleColor: '#fff',
-                            bodyColor: '#b0b0b0',
-                            borderColor: '#404040',
-                            borderWidth: 1
-                        }
-                    }
-                }
-            });
-        }
+// ── LOAD SCANS ────────────────────────────────────────────────────
+async function loadScans() {
+  try {
+    const r = await fetch('/api/scans');
+    const data = await r.json();
+    allScans = Array.isArray(data) ? data : [];
 
-        // Render OWASP coverage
-        function renderOwaspCoverage() {
-            const owaspGrid = document.getElementById('owaspGrid');
-            if (!owaspGrid) return;
-            
-            const coverage = currentScan.owasp_coverage || [];
-            
-            if (coverage.length === 0) {
-                owaspGrid.innerHTML = '<div class="no-data">No OWASP data available</div>';
-                return;
-            }
-            
-            owaspGrid.innerHTML = coverage.map(item => {
-                const category = owaspCategories[item.owasp_id] || item.owasp_id;
-                const statusClass = item.status === 'fail' ? 'fail' : item.status === 'pass' ? 'pass' : '';
-                return `
-                    <div class="owasp-item ${statusClass}">
-                        <div class="owasp-id">${item.owasp_id}</div>
-                        <div class="owasp-count">${item.finding_count} finding${item.finding_count !== 1 ? 's' : ''}</div>
-                    </div>
-                `;
-            }).join('');
-        }
+    const opts = allScans.map(s =>
+      `<option value="${escapeAttr(s.scan_id)}">[${escapeHtml(s.grade||'?')}] ${escapeHtml(s.host||s.target)} – ${new Date(s.date).toLocaleDateString()}</option>`
+    ).join('');
+    const ph = '<option value="">— Select a scan —</option>';
 
-        // Render findings table
-        function renderFindings() {
-            const tbody = document.getElementById('findingsTableBody');
-            if (!tbody) return;
-            
-            if (filteredFindings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="no-data">No findings match the current filters</td></tr>';
-                return;
-            }
-            
-            // Sort findings
-            const sorted = [...filteredFindings].sort((a, b) => {
-                let aVal = a[sortColumn];
-                let bVal = b[sortColumn];
-                
-                if (sortColumn === 'severity') {
-                    aVal = severityOrder[aVal] ?? 999;
-                    bVal = severityOrder[bVal] ?? 999;
-                } else if (sortColumn === 'cvss_score') {
-                    aVal = parseFloat(aVal) || 0;
-                    bVal = parseFloat(bVal) || 0;
-                }
-                
-                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-                return 0;
-            });
-            
-            tbody.innerHTML = sorted.map(finding => `
-                <tr onclick="openDrawer('${finding.id}')">
-                    <td><span class="severity-badge severity-${finding.severity}">${finding.severity}</span></td>
-                    <td>${finding.domain}</td>
-                    <td>${escapeHtml(finding.title)}</td>
-                    <td>${finding.cvss_score.toFixed(1)}</td>
-                    <td>${finding.owasp_id || '-'}</td>
-                </tr>
-            `).join('');
-        }
+    ['scan-selector','cmp-a','cmp-b'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = ph + opts;
+    });
 
-        // Setup filters
-        function setupFilters() {
-            document.getElementById('severityFilter').addEventListener('change', applyFilters);
-            document.getElementById('domainFilter').addEventListener('change', applyFilters);
-            document.getElementById('searchBox').addEventListener('input', applyFilters);
-        }
+    populateHistory();
 
-        // Apply filters
-        function applyFilters() {
-            const severityFilter = document.getElementById('severityFilter').value;
-            const domainFilter = document.getElementById('domainFilter').value;
-            const searchText = document.getElementById('searchBox').value.toLowerCase();
-            
-            filteredFindings = allFindings.filter(finding => {
-                if (severityFilter && finding.severity !== severityFilter) return false;
-                if (domainFilter && finding.domain !== domainFilter) return false;
-                if (searchText) {
-                    const searchable = `${finding.title} ${finding.description} ${finding.owasp_category}`.toLowerCase();
-                    if (!searchable.includes(searchText)) return false;
-                }
-                return true;
-            });
-            
-            renderFindings();
-        }
+    if (allScans.length && !currentScan) {
+      const saved  = localStorage.getItem('ns_last_scan');
+      const target = (saved && allScans.find(s => s.scan_id === saved)) ? saved : allScans[0].scan_id;
+      await loadScan(target);
+      document.getElementById('scan-selector').value = target;
+    } else {
+      hideLoading();
+    }
+  } catch (e) {
+    console.error('loadScans:', e);
+    hideLoading();
+  }
+}
 
-        // Setup table sorting
-        function setupTableSort() {
-            document.querySelectorAll('#findingsTable th.sortable').forEach(th => {
-                th.addEventListener('click', () => {
-                    const column = th.dataset.sort;
-                    if (sortColumn === column) {
-                        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        sortColumn = column;
-                        sortDirection = 'desc';
-                    }
-                    
-                    // Update UI
-                    document.querySelectorAll('#findingsTable th').forEach(h => {
-                        h.classList.remove('sort-asc', 'sort-desc');
-                    });
-                    th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-                    
-                    renderFindings();
-                });
-            });
-        }
+async function loadScan(scanId) {
+  if (!scanId) return;
+  showLoading();
+  try {
+    const r = await fetch(`/api/scans/${encodeURIComponent(scanId)}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    currentScan = await r.json();
+    allFindings = currentScan.findings || [];
+    localStorage.setItem('ns_last_scan', scanId);
+    updateScanMeta();
+    renderOverview();
+    renderFindings();
+    document.getElementById('findings-count').textContent = allFindings.length;
+  } catch (e) {
+    console.error('loadScan:', e);
+  } finally {
+    hideLoading();
+  }
+}
 
-        // Open finding details drawer
-        function openDrawer(findingId) {
-            const finding = allFindings.find(f => f.id === findingId);
-            if (!finding) return;
-            
-            const drawer = document.getElementById('findingDrawer');
-            const title = document.getElementById('drawerTitle');
-            const content = document.getElementById('drawerContent');
-            
-            if (title) title.textContent = finding.title;
-            
-            let html = `
-                <div class="detail-section">
-                    <span class="severity-badge severity-${finding.severity}">${finding.severity}</span>
-                    <span style="margin-left: 12px; color: var(--text-secondary);">
-                        Domain: ${finding.domain} | CVSS: ${finding.cvss_score.toFixed(1)}
-                    </span>
-                </div>
-                
-                <div class="detail-section">
-                    <h3>Description</h3>
-                    <p>${escapeHtml(finding.description)}</p>
-                </div>
-            `;
-            
-            if (finding.cvss_breakdown) {
-                const breakdown = finding.cvss_breakdown;
-                html += `
-                    <div class="detail-section">
-                        <h3>CVSS Breakdown</h3>
-                        <div class="cvss-grid">
-                            <div class="cvss-item">
-                                <div class="cvss-label">Attack Vector</div>
-                                <div class="cvss-value">${breakdown.attack_vector}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Attack Complexity</div>
-                                <div class="cvss-value">${breakdown.attack_complexity}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Privileges Required</div>
-                                <div class="cvss-value">${breakdown.privileges_required}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">User Interaction</div>
-                                <div class="cvss-value">${breakdown.user_interaction}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Scope</div>
-                                <div class="cvss-value">${breakdown.scope}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Confidentiality</div>
-                                <div class="cvss-value">${breakdown.confidentiality}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Integrity</div>
-                                <div class="cvss-value">${breakdown.integrity}</div>
-                            </div>
-                            <div class="cvss-item">
-                                <div class="cvss-label">Availability</div>
-                                <div class="cvss-value">${breakdown.availability}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (finding.evidence) {
-                html += '<div class="detail-section"><h3>Evidence</h3>';
-                const ev = finding.evidence;
-                if (ev.banner) {
-                    html += `<p><strong>Banner:</strong></p><div class="evidence-block">${escapeHtml(ev.banner)}</div>`;
-                }
-                if (ev.raw_response) {
-                    html += `<p><strong>Response:</strong></p><div class="evidence-block">${escapeHtml(ev.raw_response.substring(0, 1000))}${ev.raw_response.length > 1000 ? '...' : ''}</div>`;
-                }
-                if (ev.dns_record) {
-                    html += `<p><strong>DNS Record:</strong></p><div class="evidence-block">${escapeHtml(ev.dns_record)}</div>`;
-                }
-                if (ev.certificate_info) {
-                    html += `<p><strong>Certificate:</strong></p><div class="evidence-block">${escapeHtml(JSON.stringify(ev.certificate_info, null, 2))}</div>`;
-                }
-                html += '</div>';
-            }
-            
-            if (finding.remediation) {
-                html += `
-                    <div class="detail-section">
-                        <h3>Remediation</h3>
-                        <p>${escapeHtml(finding.remediation)}</p>
-                    </div>
-                `;
-            }
-            
-            if (finding.references && finding.references.length > 0) {
-                html += `
-                    <div class="detail-section">
-                        <h3>References</h3>
-                        ${finding.references.map(ref => `<p><a href="${ref}" class="reference-link" target="_blank">${ref}</a></p>`).join('')}
-                    </div>
-                `;
-            }
-            
-            if (finding.owasp_category) {
-                html += `
-                    <div class="detail-section">
-                        <h3>OWASP Classification</h3>
-                        <p><strong>${finding.owasp_id}:</strong> ${finding.owasp_category}</p>
-                    </div>
-                `;
-            }
-            
-            content.innerHTML = html;
-            drawer.classList.add('open');
-        }
+function handleScanSelect(v) { if (v) loadScan(v); }
 
-        // Close drawer
-        function closeDrawer() {
-            document.getElementById('findingDrawer').classList.remove('open');
-        }
+// ── META BAR ──────────────────────────────────────────────────────
+function updateScanMeta() {
+  if (!currentScan) return;
+  const d   = new Date(currentScan.started_at).toLocaleString();
+  const dur = currentScan.duration_seconds ? Math.round(currentScan.duration_seconds) + 's' : '—';
+  document.getElementById('scan-meta-text').innerHTML =
+    `Host: <span>${escapeHtml(currentScan.host || currentScan.target || '—')}</span>&nbsp; ` +
+    `Date: <span>${d}</span>&nbsp; ` +
+    `Duration: <span>${dur}</span>&nbsp; ` +
+    `<span style="font-family:monospace;font-size:.7rem;color:var(--text3)">${currentScan.scan_id.slice(0,12)}…</span>`;
+}
 
-        // Populate history table
-        function populateHistory() {
-            const tbody = document.getElementById('historyTableBody');
-            
-            if (allScans.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="no-data">No scan history available</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = allScans.map(scan => {
-                const date = new Date(scan.date).toLocaleString();
-                const target = scan.target || 'N/A';
-                const host = scan.host || 'N/A';
-                const grade = scan.grade || '-';
-                const findings = scan.total_findings || 0;
-                const gradeColor = getGradeColor(grade);
-                
-                return `
-                    <tr onclick="loadScanFromHistory('${scan.scan_id}')">
-                        <td>${date}</td>
-                        <td>${escapeHtml(target)}</td>
-                        <td>${escapeHtml(host)}</td>
-                        <td><span style="color: ${gradeColor}; font-weight: bold;">${grade}</span></td>
-                        <td>${findings}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
+// ── OVERVIEW ──────────────────────────────────────────────────────
+function renderOverview() {
+  if (!currentScan) return;
+  const sc  = currentScan.scores || {};
+  const su  = currentScan.summary || {};
+  const ow  = currentScan.owasp_coverage || [];
+  const bySev = su.by_severity || {};
+  const grade = sc.grade || '?';
 
-        // Load scan from history
-        async function loadScanFromHistory(scanId) {
-            await loadScan(scanId);
-            switchTab('overview');
-        }
+  const GC = { A:'#00ff6e', B:'#10b981', C:'#ffc300', D:'#ff8800', F:'#ff3344' };
+  const gradeCol  = GC[grade] || '#888';
+  const gradeGlow = gradeCol + '44';
 
-        // Populate compare dropdowns
-        function populateCompareDropdowns() {
-            const select1 = document.getElementById('compareScan1');
-            const select2 = document.getElementById('compareScan2');
-            
-            const options = allScans.map(scan => {
-                const date = new Date(scan.date).toLocaleString();
-                const label = `${date} - ${scan.target || scan.host || scan.scan_id}`;
-                return `<option value="${scan.scan_id}">${label}</option>`;
-            }).join('');
-            
-            select1.innerHTML = '<option value="">Select a scan</option>' + options;
-            select2.innerHTML = '<option value="">Select a scan</option>' + options;
-            
-            select1.addEventListener('change', performComparison);
-            select2.addEventListener('change', performComparison);
-        }
+  const html = `
+    <div class="ov-top">
+      <div class="card grade-card" style="--grade-col:${gradeCol};--grade-glow:${gradeGlow}">
+        <span class="grade-letter">${escapeHtml(grade)}</span>
+        <span class="grade-score">${Math.round(sc.weighted_overall||0)}/100</span>
+        <span class="grade-label">Security Score</span>
+      </div>
+      <div class="sev-grid">
+        ${['critical','high','medium','low','info'].map(s => `
+          <div class="sev-card ${s}">
+            <span class="sev-num">${bySev[s]||0}</span>
+            <span class="sev-lbl">${s.charAt(0).toUpperCase()+s.slice(1)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="domain-row">
+      ${domainCard('🌐','Network',sc.network)}
+      ${domainCard('🔐','TLS',sc.tls)}
+      ${domainCard('📡','HTTP',sc.http)}
+      ${domainCard('🌍','DNS',sc.dns)}
+    </div>
+    <div class="card owasp-section">
+      <div class="card-title">OWASP Top 10 Coverage</div>
+      <div class="owasp-items">${owaspItems(ow)}</div>
+    </div>
+  `;
+  document.getElementById('ov-content').innerHTML = html;
 
-        // Perform comparison
-        async function performComparison() {
-            const scan1Id = document.getElementById('compareScan1').value;
-            const scan2Id = document.getElementById('compareScan2').value;
-            
-            if (!scan1Id || !scan2Id) {
-                document.getElementById('compareGrid').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📊</div>
-                        <p>Select two scans to compare</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            try {
-                const [scan1, scan2] = await Promise.all([
-                    fetch(`/api/scans/${scan1Id}`).then(r => r.json()),
-                    fetch(`/api/scans/${scan2Id}`).then(r => r.json())
-                ]);
-                
-                renderComparison(scan1, scan2);
-            } catch (error) {
-                console.error('Error comparing scans:', error);
-                document.getElementById('compareGrid').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <p>Error loading scans for comparison</p>
-                    </div>
-                `;
-            }
-        }
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.domain-bar-fill').forEach(el => {
+      el.style.width = el.dataset.width + '%';
+    });
+  });
+}
 
-        // Render comparison
-        function renderComparison(scan1, scan2) {
-            const grid = document.getElementById('compareGrid');
-            
-            const renderScanCard = (scan, title) => {
-                const scores = scan.scores || {};
-                const summary = scan.summary || {};
-                const bySeverity = summary.by_severity || {};
-                
-                return `
-                    <div class="card">
-                        <h2>${title}</h2>
-                        <div class="grade-display">
-                            <div class="grade-letter" style="color: ${getGradeColor(scores.grade)}">${scores.grade || '-'}</div>
-                            <div class="grade-score">${scores.weighted_overall ? scores.weighted_overall.toFixed(1) : '-'}/100</div>
-                        </div>
-                        <div class="stats-grid" style="margin-top: 20px;">
-                            <div class="stat">
-                                <div class="stat-value">${summary.total_findings || 0}</div>
-                                <div class="stat-label">Total</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value severity-critical">${bySeverity.critical || 0}</div>
-                                <div class="stat-label">Critical</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value severity-high">${bySeverity.high || 0}</div>
-                                <div class="stat-label">High</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value severity-medium">${bySeverity.medium || 0}</div>
-                                <div class="stat-label">Medium</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            };
-            
-            const diff = calculateDifferences(scan1, scan2);
-            
-            grid.innerHTML = `
-                ${renderScanCard(scan1, 'Scan 1')}
-                ${renderScanCard(scan2, 'Scan 2')}
-                <div class="card" style="grid-column: 1 / -1;">
-                    <h2>Differences</h2>
-                    <div class="detail-section">
-                        <h3>Score Changes</h3>
-                        <p>Overall: ${diff.scoreDiff > 0 ? '+' : ''}${diff.scoreDiff.toFixed(1)} 
-                           <span class="diff-indicator ${diff.scoreDiff > 0 ? 'diff-improved' : diff.scoreDiff < 0 ? 'diff-regression' : ''}">
-                               ${diff.scoreDiff > 0 ? 'Improved' : diff.scoreDiff < 0 ? 'Regression' : 'No change'}
-                           </span>
-                        </p>
-                    </div>
-                    <div class="detail-section">
-                        <h3>Finding Changes</h3>
-                        <p>New findings: <span class="diff-new">${diff.newFindings}</span></p>
-                        <p>Resolved findings: <span class="diff-improved">${diff.resolvedFindings}</span></p>
-                        <p>Total change: ${diff.findingDiff > 0 ? '+' : ''}${diff.findingDiff}</p>
-                    </div>
-                </div>
-            `;
-        }
+function scoreColor(s) {
+  if (s >= 90) return '#00ff6e';
+  if (s >= 75) return '#10b981';
+  if (s >= 60) return '#ffc300';
+  if (s >= 45) return '#ff8800';
+  return '#ff3344';
+}
 
-        // Calculate differences between scans
-        function calculateDifferences(scan1, scan2) {
-            const score1 = scan1.scores?.weighted_overall || 0;
-            const score2 = scan2.scores?.weighted_overall || 0;
-            const findings1 = scan1.summary?.total_findings || 0;
-            const findings2 = scan2.summary?.total_findings || 0;
-            
-            const scan1Ids = new Set((scan1.findings || []).map(f => f.title));
-            const scan2Ids = new Set((scan2.findings || []).map(f => f.title));
-            
-            const newFindings = (scan2.findings || []).filter(f => !scan1Ids.has(f.title)).length;
-            const resolvedFindings = (scan1.findings || []).filter(f => !scan2Ids.has(f.title)).length;
-            
-            return {
-                scoreDiff: score2 - score1,
-                findingDiff: findings2 - findings1,
-                newFindings,
-                resolvedFindings
-            };
-        }
+function domainCard(icon, name, score) {
+  const s = Math.round(score ?? 0);
+  const col = scoreColor(s);
+  return `
+    <div class="card domain-card">
+      <div class="domain-head">
+        <span class="domain-icon">${icon}</span>
+        <span class="domain-score" style="color:${col}">${s}</span>
+      </div>
+      <div class="domain-name">${name}</div>
+      <div class="domain-bar-track">
+        <div class="domain-bar-fill" data-width="${s}" style="width:0%;background:linear-gradient(90deg,${col}88,${col})"></div>
+      </div>
+    </div>`;
+}
 
-        // Helper functions
-        function getGradeColor(grade) {
-            const colors = {
-                'A': 'var(--grade-a)',
-                'B': 'var(--grade-b)',
-                'C': 'var(--grade-c)',
-                'D': 'var(--grade-d)',
-                'F': 'var(--grade-f)'
-            };
-            return colors[grade] || 'var(--text-secondary)';
-        }
+function owaspItems(coverage) {
+  const map = {};
+  coverage.forEach(c => { map[c.owasp_id] = c; });
+  return ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'].map(id => {
+    const c   = map[id];
+    const cls = c ? (c.status === 'pass' ? 'pass' : 'fail') : 'neutral';
+    const st  = c ? (c.status === 'pass' ? '✓ Pass' : `✗ ${c.finding_count||0} finding${(c.finding_count||0)!==1?'s':''}`) : '— N/A';
+    return `
+      <div class="ow-item ${cls}">
+        <div class="ow-id">${id}</div>
+        <div class="ow-name">${OWASP_NAMES[id]||id}</div>
+        <div class="ow-status">${st}</div>
+      </div>`;
+  }).join('');
+}
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+// ── FINDINGS ─────────────────────────────────────────────────────
+function renderFindings() {
+  const el = document.getElementById('findings-content');
+  if (!currentScan) {
+    el.innerHTML = '<div class="empty-state"><span class="es-icon">🔍</span><div class="es-title">No scan selected</div></div>';
+    return;
+  }
+  const domains    = [...new Set(allFindings.map(f => f.domain))].sort();
+  const severities = ['critical','high','medium','low','info'];
 
-        function showLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.classList.remove('hidden');
-        }
+  el.innerHTML = `
+    <div class="filter-bar">
+      <select class="filter-select" id="flt-sev" onchange="applyFilters()">
+        <option value="">All Severities</option>
+        ${severities.map(s => `<option value="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="flt-dom" onchange="applyFilters()">
+        <option value="">All Domains</option>
+        ${domains.map(d => `<option value="${d}">${d}</option>`).join('')}
+      </select>
+      <input class="filter-input" id="flt-q" type="text" placeholder="Search findings…" oninput="applyFilters()">
+      <span class="findings-count" id="findings-shown">${allFindings.length} findings</span>
+    </div>
+    <div class="table-wrap">
+      <table class="findings" id="findings-table">
+        <thead>
+          <tr>
+            <th data-col="severity">Severity <span class="sort-icon"></span></th>
+            <th data-col="domain">Domain <span class="sort-icon"></span></th>
+            <th data-col="title">Finding <span class="sort-icon"></span></th>
+            <th data-col="cvss_score">CVSS <span class="sort-icon"></span></th>
+            <th data-col="owasp_id">OWASP <span class="sort-icon"></span></th>
+          </tr>
+        </thead>
+        <tbody id="findings-tbody"></tbody>
+      </table>
+    </div>`;
 
-        function hideLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.classList.add('hidden');
-        }
+  setupTableSort();
+}
 
-        function showEmptyState(tab, message) {
-            hideLoading();
-            const content = document.getElementById(tab);
-            content.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📊</div>
-                    <p>${message}</p>
-                </div>
-            `;
-        }
+function applyFilters() {
+  const sev = (document.getElementById('flt-sev')?.value||'').toLowerCase();
+  const dom = (document.getElementById('flt-dom')?.value||'').toLowerCase();
+  const q   = (document.getElementById('flt-q')?.value  ||'').toLowerCase();
 
-        function showError(tab, message) {
-            hideLoading();
-            const content = document.getElementById(tab);
-            content.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">⚠️</div>
-                    <p>${message}</p>
-                </div>
-            `;
-        }
+  let filtered = allFindings.filter(f => {
+    if (sev && (f.severity||'').toLowerCase() !== sev) return false;
+    if (dom && (f.domain||'').toLowerCase() !== dom) return false;
+    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return false;
+    return true;
+  });
 
-        // Close drawer on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeDrawer();
-            }
-        });
-    </script>
+  filtered = sortFindings(filtered);
+  renderFindingsRows(filtered);
+
+  const el = document.getElementById('findings-shown');
+  if (el) el.textContent = `${filtered.length} finding${filtered.length!==1?'s':''}`;
+}
+
+function sortFindings(list) {
+  return [...list].sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (sortCol === 'severity') { av = SEV_ORDER[av]??99; bv = SEV_ORDER[bv]??99; }
+    if (av < bv) return sortDir === 'asc' ? -1 :  1;
+    if (av > bv) return sortDir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+function renderFindingsRows(list) {
+  const tbody = document.getElementById('findings-tbody');
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="padding:2.5rem"><span class="es-icon">🔍</span><div class="es-title">No findings match filters</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(f => `
+    <tr onclick="openDrawer('${escapeAttr(f.id)}')">
+      <td><span class="sev-badge ${(f.severity||'').toLowerCase()}">${escapeHtml(f.severity||'?')}</span></td>
+      <td><span class="domain-badge">${escapeHtml(f.domain||'?')}</span></td>
+      <td><div class="finding-title" title="${escapeAttr(f.title||'')}">${escapeHtml(f.title||'Untitled')}</div></td>
+      <td><span class="cvss-score" style="color:${cvssColor(f.cvss_score)}">${(f.cvss_score||0).toFixed(1)}</span></td>
+      <td><span class="owasp-tag">${escapeHtml(f.owasp_id||'—')}</span></td>
+    </tr>`).join('');
+}
+
+function setupTableSort() {
+  document.querySelectorAll('#findings-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      else { sortCol = col; sortDir = 'asc'; }
+      document.querySelectorAll('#findings-table th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+      th.classList.add('sort-' + sortDir);
+      applyFilters();
+    });
+  });
+  const dth = document.querySelector('#findings-table th[data-col="severity"]');
+  if (dth) { dth.classList.add('sort-asc'); }
+  applyFilters();
+}
+
+function cvssColor(score) {
+  const s = parseFloat(score)||0;
+  if (s >= 9) return 'var(--critical)';
+  if (s >= 7) return 'var(--high)';
+  if (s >= 4) return 'var(--medium)';
+  if (s >  0) return 'var(--low)';
+  return 'var(--text3)';
+}
+
+// ── DRAWER ────────────────────────────────────────────────────────
+function openDrawer(findingId) {
+  const f = allFindings.find(x => x.id === findingId);
+  if (!f) return;
+
+  document.getElementById('drawer-title').textContent = f.title || 'Finding Details';
+  document.getElementById('drawer-badges').innerHTML = `
+    <span class="sev-badge ${(f.severity||'').toLowerCase()}">${escapeHtml(f.severity||'?')}</span>
+    <span class="domain-badge">${escapeHtml(f.domain||'?')}</span>
+    <span class="owasp-tag">${escapeHtml(f.owasp_id||'?')}: ${escapeHtml(OWASP_NAMES[f.owasp_id]||'')}</span>
+  `;
+
+  const parts = [];
+  const cvss = f.cvss_score || 0;
+  const bd   = f.cvss_breakdown || {};
+
+  parts.push(`
+    <div>
+      <div class="d-section-title">CVSS 3.1 Score</div>
+      <div class="cvss-box">
+        <div class="cvss-score-main">
+          <span class="cvss-big" style="color:${cvssColor(cvss)}">${cvss.toFixed(1)}</span>
+          <div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:.3rem">${escapeHtml((f.severity||'').toUpperCase())}</div>
+            <div class="cvss-vector-text">${escapeHtml(f.cvss_vector||'—')}</div>
+          </div>
+        </div>
+        <div class="cvss-breakdown-grid">
+          ${Object.entries(bd).map(([k,v]) => `
+            <div class="cvss-metric">
+              <div class="cvss-metric-name">${escapeHtml(k)}</div>
+              <div class="cvss-metric-val">${escapeHtml(String(v))}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`);
+
+  const ev = f.evidence || {};
+  const evLines = [];
+  if (ev.banner)      evLines.push('Banner: ' + ev.banner);
+  if (ev.request)     evLines.push('Request:\n' + ev.request);
+  if (ev.response)    evLines.push('Response:\n' + ev.response);
+  if (ev.certificate) evLines.push('Certificate:\n' + JSON.stringify(ev.certificate, null, 2));
+  if (ev.dns_record)  evLines.push('DNS: ' + ev.dns_record);
+  if (ev.raw)         evLines.push(ev.raw);
+
+  if (evLines.length) {
+    parts.push(`
+      <div>
+        <div class="d-section-title">Evidence</div>
+        <div class="evidence-box">${escapeHtml(evLines.join('\n\n'))}</div>
+      </div>`);
+  }
+
+  if (f.remediation) {
+    parts.push(`
+      <div>
+        <div class="d-section-title">Remediation</div>
+        <div class="remediation-box">${escapeHtml(f.remediation)}</div>
+      </div>`);
+  }
+
+  document.getElementById('drawer-body').innerHTML = parts.join('');
+  document.getElementById('finding-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('finding-drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────
+function populateHistory() {
+  const el = document.getElementById('history-list');
+  if (!allScans.length) {
+    el.innerHTML = `<div class="empty-state"><span class="es-icon">📂</span><div class="es-title">No scans yet</div><p>Run a scan to see results here.</p></div>`;
+    return;
+  }
+  el.innerHTML = allScans.map(s => `
+    <div class="hist-card" onclick="loadScanFromHistory('${escapeAttr(s.scan_id)}')">
+      <div class="hist-grade" data-grade="${escapeAttr(s.grade||'?')}">${escapeHtml(s.grade||'?')}</div>
+      <div class="hist-info">
+        <div class="hist-host">${escapeHtml(s.host||s.target||'Unknown')}</div>
+        <div class="hist-meta">
+          <span>Date: <span>${new Date(s.date).toLocaleString()}</span></span>
+          <span style="font-family:monospace;font-size:.7rem;color:var(--text3)">${s.scan_id.slice(0,10)}…</span>
+        </div>
+      </div>
+      <div class="hist-findings">
+        <div class="num">${s.total_findings||0}</div>
+        <div class="lbl">findings</div>
+      </div>
+    </div>`).join('');
+}
+
+function loadScanFromHistory(scanId) {
+  loadScan(scanId);
+  document.getElementById('scan-selector').value = scanId;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="overview"]').classList.add('active');
+  document.getElementById('tab-overview').classList.add('active');
+}
+
+// ── COMPARE ───────────────────────────────────────────────────────
+async function performComparison() {
+  const idA = document.getElementById('cmp-a').value;
+  const idB = document.getElementById('cmp-b').value;
+  if (!idA || !idB)    { alert('Please select two scans to compare.'); return; }
+  if (idA === idB)     { alert('Please select two different scans.'); return; }
+
+  showLoading();
+  try {
+    const [rA, rB] = await Promise.all([
+      fetch(`/api/scans/${encodeURIComponent(idA)}`).then(r => r.json()),
+      fetch(`/api/scans/${encodeURIComponent(idB)}`).then(r => r.json()),
+    ]);
+    renderComparison(rA, rB);
+  } catch (e) {
+    document.getElementById('cmp-result').innerHTML = '<p style="color:var(--critical);padding:1rem">Failed to load scans.</p>';
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderComparison(a, b) {
+  const sa = a.scores||{}, sb = b.scores||{};
+  const bsa = (a.summary||{}).by_severity||{};
+  const bsb = (b.summary||{}).by_severity||{};
+
+  function scoreRow(la, la2, vA, vB) {
+    const d = Math.round(vB - vA);
+    const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'neu';
+    return `<div class="cmp-row"><span class="lbl">${la}</span><div style="display:flex;gap:.6rem;align-items:center">
+      <span class="val">${Math.round(vA)}</span>
+      <span class="delta ${cls}">${d>0?'+':''}${d}</span>
+      <span class="val">${Math.round(vB)}</span></div></div>`;
+  }
+
+  function sevRow(key, label) {
+    const vA = bsa[key]||0, vB = bsb[key]||0;
+    const d = vB - vA;
+    const isBad = key === 'critical' || key === 'high' || key === 'medium';
+    const cls = d === 0 ? 'neu' : isBad ? (d > 0 ? 'neg' : 'pos') : (d > 0 ? 'pos' : 'neg');
+    return `<div class="cmp-row"><span class="lbl">${label}</span><div style="display:flex;gap:.6rem;align-items:center">
+      <span class="val" style="color:var(--${key})">${vA}</span>
+      <span class="delta ${cls}">${d>0?'+':''}${d}</span>
+      <span class="val" style="color:var(--${key})">${vB}</span></div></div>`;
+  }
+
+  document.getElementById('cmp-result').innerHTML = `
+    <div class="cmp-result">
+      <div class="cmp-col">
+        <div class="cmp-col-title">Score Comparison (A → B)</div>
+        <div style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem">${escapeHtml(a.host||a.target||'?')} vs ${escapeHtml(b.host||b.target||'?')}</div>
+        ${scoreRow('Overall', '', sa.weighted_overall||0, sb.weighted_overall||0)}
+        ${scoreRow('Network', '', sa.network||0, sb.network||0)}
+        ${scoreRow('TLS', '',     sa.tls||0, sb.tls||0)}
+        ${scoreRow('HTTP', '',    sa.http||0, sb.http||0)}
+        ${scoreRow('DNS', '',     sa.dns||0, sb.dns||0)}
+      </div>
+      <div class="cmp-col">
+        <div class="cmp-col-title">Findings Comparison (A → B)</div>
+        <div style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem">${new Date(a.started_at).toLocaleString()} vs ${new Date(b.started_at).toLocaleString()}</div>
+        ${sevRow('critical','Critical')}
+        ${sevRow('high','High')}
+        ${sevRow('medium','Medium')}
+        ${sevRow('low','Low')}
+        ${sevRow('info','Info')}
+      </div>
+    </div>`;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ── INIT ──────────────────────────────────────────────────────────
+loadScans();
+</script>
 </body>
 </html>

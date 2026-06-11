@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetSentinel — Network Security Intelligence</title>
+  <style>
+    :root {
+      --bg-void: #010804;
+      --bg-dark: #021206;
+      --glass-bg: rgba(2, 18, 8, 0.78);
+      --glass-border: rgba(0, 255, 110, 0.18);
+      --glass-glow: rgba(0, 255, 110, 0.07);
+      --accent: #00ff6e;
+      --accent-dim: #10b981;
+      --accent-soft: rgba(0, 255, 110, 0.38);
+      --accent-subtle: rgba(0, 255, 110, 0.12);
+      --text-bright: #f0fff6;
+      --text-main: #b8f0d0;
+      --text-dim: #5ea87a;
+      --text-muted: #2d5a40;
+      --critical: #ff3344;
+      --high: #ff8800;
+      --medium: #ffc300;
+      --low: #00ff6e;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-void);
+      color: var(--text-main);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── NAV ─────────────────────────────── */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 2.5rem;
+      background: rgba(1, 8, 4, 0.72);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), #00cc55);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 18px var(--accent-soft);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color .2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.2rem;
+      background: var(--accent);
+      color: #010804;
+      font-weight: 700;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all .2s;
+      box-shadow: 0 0 22px var(--accent-soft);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #30ffa0;
+      box-shadow: 0 0 36px var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.2rem;
+      background: transparent;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: 8px;
+      text-decoration: none;
+      border: 1px solid var(--glass-border);
+      transition: all .2s;
+    }
+
+    .btn-ghost:hover {
+      background: var(--accent-subtle);
+      border-color: var(--accent-soft);
+    }
+
+    /* ── HERO ────────────────────────────── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 7rem 2.5rem 5rem;
+      gap: 3rem;
+    }
+
+    .hero-content { max-width: 660px; flex-shrink: 0; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.32rem 0.85rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: blink-dot 2s infinite;
+    }
+
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.75); }
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      color: var(--text-bright);
+      margin-bottom: 1.2rem;
+    }
+
+    .grad-text {
+      background: linear-gradient(90deg, var(--accent) 0%, #00e5ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      max-width: 500px;
+      margin-bottom: 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .hero-cta .btn-primary  { padding: .8rem 1.8rem; font-size: .95rem; }
+    .hero-cta .btn-ghost    { padding: .8rem 1.8rem; font-size: .95rem; }
+
+    .hero-stats {
+      display: flex;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+    }
+
+    .h-stat-num {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .h-stat-lbl {
+      display: block;
+      font-size: .7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-top: .2rem;
+    }
+
+    /* Terminal */
+    .hero-terminal {
+      flex: 1;
+      max-width: 500px;
+      min-width: 320px;
+      background: rgba(1, 8, 4, 0.88);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      overflow: hidden;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 30px 70px rgba(0,0,0,.7), 0 0 50px rgba(0,255,110,.06);
+    }
+
+    .term-header {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .7rem 1rem;
+      background: rgba(0,0,0,.35);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .tdot { width: 10px; height: 10px; border-radius: 50%; }
+    .tdot:nth-child(1) { background: #ff5f57; }
+    .tdot:nth-child(2) { background: #febc2e; }
+    .tdot:nth-child(3) { background: #28c840; }
+
+    .term-title {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-left: .5rem;
+    }
+
+    .term-body {
+      padding: 1rem 1.1rem;
+      font-family: 'Courier New', monospace;
+      font-size: .75rem;
+      line-height: 1.9;
+      min-height: 300px;
+      color: var(--text-dim);
+      overflow: hidden;
+    }
+
+    .tl { display: block; white-space: pre; }
+    .tl.cmd      { color: var(--accent); }
+    .tl.ok       { color: #00ff6e; }
+    .tl.warn     { color: var(--medium); }
+    .tl.crit     { color: var(--critical); }
+    .tl.info     { color: #00ccff; }
+    .tl.muted    { color: var(--text-muted); }
+
+    .cursor {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--accent);
+      animation: cur 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 1px;
+    }
+
+    @keyframes cur { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* ── STATS BAND ──────────────────────── */
+    .stats-band {
+      position: relative;
+      z-index: 1;
+      background: rgba(0,0,0,.5);
+      border-top: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .stats-inner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .stat-cell {
+      padding: 2.5rem 1.5rem;
+      border-right: 1px solid var(--glass-border);
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+
+    .stat-cell:last-child { border-right: none; }
+    .stat-cell.vis { opacity: 1; transform: none; }
+
+    .s-num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: .4rem;
+    }
+
+    .s-lbl { font-size: .8rem; color: var(--text-dim); }
+
+    /* ── SECTIONS ────────────────────────── */
+    .section {
+      position: relative;
+      z-index: 1;
+      padding: 6rem 2.5rem;
+    }
+
+    .sec-head {
+      text-align: center;
+      margin-bottom: 3.5rem;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity .6s, transform .6s;
+    }
+
+    .sec-head.vis { opacity: 1; transform: none; }
+
+    .sec-badge {
+      display: inline-block;
+      padding: .28rem .8rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      font-size: .7rem;
+      color: var(--accent);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: .8rem;
+    }
+
+    .sec-title {
+      font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: -.03em;
+      margin-bottom: .8rem;
+    }
+
+    .sec-desc {
+      font-size: .95rem;
+      color: var(--text-dim);
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    /* ── FEATURES ────────────────────────── */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 1.25rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .feat-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: all .3s;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .6s ease, transform .6s ease, border-color .3s, box-shadow .3s, transform .3s;
+    }
+
+    .feat-card.vis { opacity: 1; transform: translateY(0); }
+
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .feat-card:hover {
+      border-color: rgba(0,255,110,.35);
+      box-shadow: 0 16px 50px rgba(0,0,0,.5), 0 0 32px rgba(0,255,110,.08);
+      transform: translateY(-5px) !important;
+    }
+
+    .feat-card:hover::before { opacity: 1; }
+
+    .feat-icon {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg, rgba(0,255,110,.18), rgba(0,255,110,.04));
+      border: 1px solid rgba(0,255,110,.28);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .feat-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: .5rem;
+    }
+
+    .feat-desc {
+      font-size: .83rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    .feat-tags {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-top: 1.1rem;
+    }
+
+    .ftag {
+      font-size: .68rem;
+      padding: .18rem .55rem;
+      background: rgba(0,255,110,.07);
+      border: 1px solid rgba(0,255,110,.18);
+      border-radius: 100px;
+      color: var(--accent-dim);
+    }
+
+    /* ── STEPS ───────────────────────────── */
+    .steps-section { background: rgba(0,0,0,.35); }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.25rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 3rem;
+      left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--glass-border), var(--glass-border), transparent);
+    }
+
+    .step-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      backdrop-filter: blur(18px);
+      transition: all .3s;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .6s ease, transform .6s ease, border-color .3s, box-shadow .3s;
+    }
+
+    .step-card.vis { opacity: 1; transform: none; }
+    .step-card:hover {
+      border-color: rgba(0,255,110,.35);
+      transform: translateY(-4px) !important;
+    }
+
+    .step-num {
+      width: 46px; height: 46px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: #010804;
+      margin: 0 auto 1.1rem;
+      box-shadow: 0 0 22px var(--accent-soft);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-title {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: .5rem;
+    }
+
+    .step-desc { font-size: .82rem; color: var(--text-dim); line-height: 1.6; }
+
+    /* ── OWASP ───────────────────────────── */
+    .owasp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: .9rem;
+      max-width: 1050px;
+      margin: 0 auto;
+    }
+
+    .owasp-item {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      transition: all .2s;
+      opacity: 0;
+      transform: scale(.95);
+      transition: opacity .5s ease, transform .5s ease, border-color .2s;
+    }
+
+    .owasp-item.vis { opacity: 1; transform: scale(1); }
+    .owasp-item:hover { border-color: rgba(0,255,110,.4); background: rgba(0,255,110,.05); }
+
+    .owasp-id {
+      font-size: .68rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: .05em;
+      margin-bottom: .4rem;
+    }
+
+    .owasp-name { font-size: .72rem; color: var(--text-dim); line-height: 1.4; }
+
+    /* ── CTA ─────────────────────────────── */
+    .cta-wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .cta-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 4rem 3rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 60px rgba(0,255,110,.04);
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+
+    .cta-card.vis { opacity: 1; transform: none; }
+
+    .cta-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 260px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .cta-title {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--text-bright);
+      margin-bottom: .8rem;
+      letter-spacing: -.03em;
+    }
+
+    .cta-desc { color: var(--text-dim); margin-bottom: 2.2rem; font-size: .95rem; }
+
+    .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .cta-btns .btn-primary { padding: .85rem 2rem; font-size: .95rem; }
+
+    /* ── FOOTER ──────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1.8rem 2.5rem;
+      border-top: 1px solid var(--glass-border);
+      font-size: .82rem;
+      color: var(--text-muted);
+    }
+
+    .foot-logo { font-weight: 800; color: var(--text-dim); }
+
+    /* ── RESPONSIVE ──────────────────────── */
+    @media (max-width: 860px) {
+      .hero { flex-direction: column; min-height: auto; padding-top: 5.5rem; }
+      .hero-terminal { max-width: 100%; width: 100%; }
+      .steps-grid::before { display: none; }
+    }
+
+    @media (max-width: 560px) {
+      .nav-links a:not(.btn-primary) { display: none; }
+      .stat-cell { border-right: none; border-bottom: 1px solid var(--glass-border); }
+      .cta-card { padding: 2.5rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="logo-icon">⚡</div>
+    NetSentinel
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#coverage">Coverage</a>
+    <a href="/dashboard" class="btn-primary">Dashboard →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">Network Security Intelligence</div>
+    <h1>Net<span class="grad-text">Sentinel</span></h1>
+    <p class="hero-desc">
+      Advanced security auditing combining static code analysis, live network probing,
+      and CVSS&nbsp;3.1 scoring — into one unified platform.
+    </p>
+    <div class="hero-cta">
+      <a href="/dashboard" class="btn-primary">Open Dashboard →</a>
+      <a href="#features" class="btn-ghost">Explore Features</a>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <span class="h-stat-num">1000+</span>
+        <span class="h-stat-lbl">Ports Probed</span>
+      </div>
+      <div>
+        <span class="h-stat-num">CVSS 3.1</span>
+        <span class="h-stat-lbl">Scoring Standard</span>
+      </div>
+      <div>
+        <span class="h-stat-num">A → F</span>
+        <span class="h-stat-lbl">Security Grade</span>
+      </div>
+      <div>
+        <span class="h-stat-num">4</span>
+        <span class="h-stat-lbl">Probe Domains</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-terminal">
+    <div class="term-header">
+      <span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>
+      <span class="term-title">netsentinel — scan</span>
+    </div>
+    <div class="term-body" id="term-out"></div>
+  </div>
+</section>
+
+<!-- STATS BAND -->
+<div class="stats-band">
+  <div class="stats-inner">
+    <div class="stat-cell"><div class="s-num" data-count="1000">0</div><div class="s-lbl">Top Ports Scanned</div></div>
+    <div class="stat-cell"><div class="s-num" data-count="50">0</div><div class="s-lbl">Sensitive Paths</div></div>
+    <div class="stat-cell"><div class="s-num" data-count="10">0</div><div class="s-lbl">OWASP Categories</div></div>
+    <div class="stat-cell"><div class="s-num" data-count="4">0</div><div class="s-lbl">Probe Modules</div></div>
+    <div class="stat-cell"><div class="s-num">3.1</div><div class="s-lbl">CVSS Standard</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="sec-head">
+    <div class="sec-badge">Capabilities</div>
+    <h2 class="sec-title">Comprehensive Security Coverage</h2>
+    <p class="sec-desc">Six specialized modules working in concert to expose every angle of your attack surface.</p>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🔍</div>
+      <div class="feat-title">Static Code Analysis</div>
+      <p class="feat-desc">Extracts attack surface from source code without execution. Discovers ports, routes, secrets, and vulnerable dependencies across multiple languages.</p>
+      <div class="feat-tags"><span class="ftag">Python</span><span class="ftag">TypeScript</span><span class="ftag">Java</span><span class="ftag">GitHub</span></div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌐</div>
+      <div class="feat-title">Live Network Probing</div>
+      <p class="feat-desc">High-performance port scanning with 500 concurrent async connections. Service banner grabbing identifies SSH, Redis, MongoDB, and 20+ services.</p>
+      <div class="feat-tags"><span class="ftag">Async I/O</span><span class="ftag">500 sockets</span><span class="ftag">Banners</span></div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔐</div>
+      <div class="feat-title">TLS / SSL Inspection</div>
+      <p class="feat-desc">Protocol version checks, cipher suite enumeration, certificate validity, self-signed detection, weak ciphers (RC4/DES), and OCSP stapling.</p>
+      <div class="feat-tags"><span class="ftag">TLS 1.3</span><span class="ftag">Ciphers</span><span class="ftag">Certificates</span></div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📡</div>
+      <div class="feat-title">HTTP Security Headers</div>
+      <p class="feat-desc">Validates CSP, HSTS, X-Frame-Options, CORS policies, cookie security attributes, HTTP methods, and 50+ sensitive path exposures.</p>
+      <div class="feat-tags"><span class="ftag">CSP</span><span class="ftag">CORS</span><span class="ftag">HSTS</span><span class="ftag">Cookies</span></div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌍</div>
+      <div class="feat-title">DNS Intelligence</div>
+      <p class="feat-desc">Zone transfer detection, SPF / DKIM / DMARC analysis, subdomain enumeration with 500+ wordlist, CAA records, and DNS rebinding.</p>
+      <div class="feat-tags"><span class="ftag">DMARC</span><span class="ftag">SPF/DKIM</span><span class="ftag">Subdomains</span></div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">CVSS 3.1 Scoring</div>
+      <p class="feat-desc">Full CVSS 3.1 base score calculation per the FIRST specification. Domain-weighted overall grade (A–F) and complete OWASP Top 10 2021 mapping.</p>
+      <div class="feat-tags"><span class="ftag">CVSS 3.1</span><span class="ftag">OWASP</span><span class="ftag">A–F Grade</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW -->
+<section class="section steps-section" id="workflow">
+  <div class="sec-head">
+    <div class="sec-badge">Workflow</div>
+    <h2 class="sec-title">From Target to Intelligence</h2>
+    <p class="sec-desc">A four-phase pipeline turns any codebase or live host into actionable security data.</p>
+  </div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">Configure Target</div>
+      <p class="step-desc">GitHub URL, local filesystem path, or live hostname. NetSentinel validates reachability before scanning.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">Analyze Code</div>
+      <p class="step-desc">Static analyzer extracts ports, API routes, hardcoded secrets, and SBOM dependency vulnerabilities.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">Live Probing</div>
+      <p class="step-desc">Four concurrent probe modules sweep the target: network, TLS, HTTP headers, and DNS records.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-title">Score &amp; Report</div>
+      <p class="step-desc">CVSS 3.1 scores computed, domain grades assigned, OWASP mapped, dashboard launched automatically.</p>
+    </div>
+  </div>
+</section>
+
+<!-- OWASP COVERAGE -->
+<section class="section" id="coverage">
+  <div class="sec-head">
+    <div class="sec-badge">Compliance</div>
+    <h2 class="sec-title">Full OWASP Top 10 Coverage</h2>
+    <p class="sec-desc">Every finding is mapped to OWASP Top 10 2021 so you can track compliance in real time.</p>
+  </div>
+  <div class="owasp-grid">
+    <div class="owasp-item"><div class="owasp-id">A01</div><div class="owasp-name">Broken Access Control</div></div>
+    <div class="owasp-item"><div class="owasp-id">A02</div><div class="owasp-name">Cryptographic Failures</div></div>
+    <div class="owasp-item"><div class="owasp-id">A03</div><div class="owasp-name">Injection</div></div>
+    <div class="owasp-item"><div class="owasp-id">A04</div><div class="owasp-name">Insecure Design</div></div>
+    <div class="owasp-item"><div class="owasp-id">A05</div><div class="owasp-name">Security Misconfiguration</div></div>
+    <div class="owasp-item"><div class="owasp-id">A06</div><div class="owasp-name">Vulnerable Components</div></div>
+    <div class="owasp-item"><div class="owasp-id">A07</div><div class="owasp-name">Auth Failures</div></div>
+    <div class="owasp-item"><div class="owasp-id">A08</div><div class="owasp-name">Data Integrity Failures</div></div>
+    <div class="owasp-item"><div class="owasp-id">A09</div><div class="owasp-name">Logging Failures</div></div>
+    <div class="owasp-item"><div class="owasp-id">A10</div><div class="owasp-name">SSRF</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="cta-wrap">
+    <div class="cta-card">
+      <h2 class="cta-title">Start Your First Scan</h2>
+      <p class="cta-desc">Open the dashboard to view results, explore findings, compare scans over time, and track your security posture.</p>
+      <div class="cta-btns">
+        <a href="/dashboard" class="btn-primary">Open Dashboard →</a>
+        <a href="#features" class="btn-ghost">Learn More</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="foot-logo">⚡ NetSentinel</span>
+  <span>Network Security Intelligence Platform</span>
+  <span>CVSS 3.1 · OWASP Top 10 2021</span>
+</footer>
+
+<!-- THREE.JS CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  // ── THREE.JS NETWORK BACKGROUND ──────────────────────────────────
+  const canvas = document.getElementById('bg-canvas');
+  const W = window.innerWidth, H = window.innerHeight;
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(W, H);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 1000);
+  camera.position.set(0, 0, 32);
+
+  // Nodes
+  const N = 70;
+  const pos = [], vel = [], meshes = [];
+  const geoS = new THREE.SphereGeometry(0.13, 6, 6);
+  const matG = new THREE.MeshBasicMaterial({ color: 0x00ff6e });
+  const matD = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+  const matR = new THREE.MeshBasicMaterial({ color: 0xff3344 });
+  const MATS = [matG, matG, matG, matG, matD, matD, matR];
+
+  const group = new THREE.Group();
+  for (let i = 0; i < N; i++) {
+    const p = new THREE.Vector3(
+      (Math.random() - .5) * 62,
+      (Math.random() - .5) * 42,
+      (Math.random() - .5) * 22
+    );
+    const v = new THREE.Vector3(
+      (Math.random() - .5) * .022,
+      (Math.random() - .5) * .018,
+      (Math.random() - .5) * .01
+    );
+    pos.push(p); vel.push(v);
+    const m = new THREE.Mesh(geoS, MATS[~~(Math.random() * MATS.length)]);
+    m.position.copy(p);
+    meshes.push(m);
+    group.add(m);
+  }
+  scene.add(group);
+
+  // Lines
+  const lineGeo = new THREE.BufferGeometry();
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x00ff6e, transparent: true, opacity: .13 });
+  const lineObj = new THREE.LineSegments(lineGeo, lineMat);
+  scene.add(lineObj);
+
+  const CONN = 12;
+  function rebuildLines() {
+    const pts = [];
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        if (pos[i].distanceTo(pos[j]) < CONN) {
+          pts.push(pos[i].x, pos[i].y, pos[i].z, pos[j].x, pos[j].y, pos[j].z);
+        }
+      }
+    }
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    lineGeo.attributes.position.needsUpdate = true;
+  }
+
+  // Stars
+  const starPts = new Float32Array(500 * 3);
+  for (let i = 0; i < 500; i++) {
+    starPts[i*3]   = (Math.random()-.5)*120;
+    starPts[i*3+1] = (Math.random()-.5)*90;
+    starPts[i*3+2] = (Math.random()-.5)*60;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPts, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x10b981, size: .08, transparent: true, opacity: .35 })));
+
+  let frame = 0;
+  let mx = 0, my = 0;
+
+  function tick() {
+    requestAnimationFrame(tick);
+    frame++;
+
+    for (let i = 0; i < N; i++) {
+      pos[i].add(vel[i]);
+      meshes[i].position.copy(pos[i]);
+      if (Math.abs(pos[i].x) > 31) vel[i].x *= -1;
+      if (Math.abs(pos[i].y) > 21) vel[i].y *= -1;
+      if (Math.abs(pos[i].z) > 11) vel[i].z *= -1;
+      meshes[i].scale.setScalar(1 + .28 * Math.sin(frame * .028 + i));
+    }
+
+    if (frame % 3 === 0) rebuildLines();
+
+    scene.rotation.y += .0007;
+    camera.position.x += (mx * 4 - camera.position.x) * .015;
+    camera.position.y += (-my * 3 - camera.position.y) * .015;
+
+    renderer.render(scene, camera);
+  }
+
+  tick();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  document.addEventListener('mousemove', e => {
+    mx = (e.clientX / window.innerWidth - .5) * 2;
+    my = (e.clientY / window.innerHeight - .5) * 2;
+  });
+
+  // ── TERMINAL ANIMATION ────────────────────────────────────────────
+  const LINES = [
+    { t: '$ netsentinel scan --target ./webapp --host example.com', c: 'cmd',   d: 400  },
+    { t: '',                                                          c: 'muted', d: 100  },
+    { t: '  Validating target…',                                     c: 'muted', d: 500  },
+    { t: '  ✓ Host reachable (80, 443 open)',                        c: 'ok',    d: 700  },
+    { t: '',                                                          c: 'muted', d: 100  },
+    { t: '  ▶ Static Analysis',                                      c: 'info',  d: 400  },
+    { t: '    → 3 Express.js routes found',                          c: 'muted', d: 450  },
+    { t: '    → 2 exposed ports in Dockerfile',                      c: 'muted', d: 350  },
+    { t: '    ⚠  Hardcoded secret (AWS key)',                        c: 'crit',  d: 550  },
+    { t: '',                                                          c: 'muted', d: 100  },
+    { t: '  ▶ Live Probes (4 concurrent)',                           c: 'info',  d: 400  },
+    { t: '    → Network : 12 open ports',                            c: 'muted', d: 600  },
+    { t: '    → TLS     : TLS 1.1 deprecated',                       c: 'warn',  d: 500  },
+    { t: '    → HTTP    : Missing CSP, HSTS',                        c: 'warn',  d: 450  },
+    { t: '    → DNS     : SPF +all risk',                            c: 'warn',  d: 500  },
+    { t: '',                                                          c: 'muted', d: 100  },
+    { t: '  ▶ Scoring',                                              c: 'info',  d: 350  },
+    { t: '    Network 72  TLS 61  HTTP 55  DNS 78',                  c: 'muted', d: 250  },
+    { t: '    Overall : 67/100   Grade : C',                         c: 'warn',  d: 400  },
+    { t: '    17 findings (2 critical, 4 high)',                     c: 'crit',  d: 250  },
+    { t: '',                                                          c: 'muted', d: 100  },
+    { t: '  ✓ Scan complete — opening dashboard…',                   c: 'ok',    d: 700  },
+  ];
+
+  const termOut = document.getElementById('term-out');
+  let delay = 900;
+
+  LINES.forEach(l => {
+    delay += l.d;
+    const d = delay;
+    setTimeout(() => {
+      const sp = document.createElement('span');
+      sp.className = 'tl ' + l.c;
+      sp.textContent = l.t || ' ';
+      termOut.appendChild(sp);
+      termOut.scrollTop = termOut.scrollHeight;
+    }, d);
+  });
+
+  setTimeout(() => {
+    const sp = document.createElement('span');
+    sp.className = 'tl cmd';
+    sp.innerHTML = '$ <span class="cursor"></span>';
+    termOut.appendChild(sp);
+  }, delay + 900);
+
+  // ── INTERSECTION OBSERVER ─────────────────────────────────────────
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: .12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.stat-cell, .sec-head, .feat-card, .step-card, .owasp-item, .cta-card').forEach(el => io.observe(el));
+
+  // ── COUNTER ANIMATION ─────────────────────────────────────────────
+  const co = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const tgt = parseInt(e.target.dataset.count);
+      if (!tgt) return;
+      co.unobserve(e.target);
+      const t0 = performance.now();
+      const dur = 1400;
+      const run = now => {
+        const p = Math.min((now - t0) / dur, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        e.target.textContent = Math.round(tgt * ease);
+        if (p < 1) requestAnimationFrame(run);
+        else e.target.textContent = tgt;
+      };
+      requestAnimationFrame(run);
+    });
+  }, { threshold: .6 });
+
+  document.querySelectorAll('[data-count]').forEach(el => co.observe(el));
+
+  // Stagger feature cards
+  document.querySelectorAll('.feat-card').forEach((c, i) => {
+    c.style.transitionDelay = (i * 80) + 'ms';
+  });
+
+  document.querySelectorAll('.owasp-item').forEach((c, i) => {
+    c.style.transitionDelay = (i * 40) + 'ms';
+  });
+})();
+</script>
+</body>
+</html>
