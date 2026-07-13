@@ -1,1648 +1,1422 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NetSentinel Dashboard</title>
-  <style>
-    /* ── TOKENS ──────────────────────────────────────────────────── */
-    :root {
-      --bg:           #010804;
-      --bg2:          #030f07;
-      --bg3:          #061510;
-      --glass:        rgba(3, 16, 8, 0.80);
-      --glass2:       rgba(0, 22, 10, 0.60);
-      --gb:           rgba(0, 255, 100, 0.16);
-      --gb2:          rgba(0, 255, 100, 0.10);
-      --accent:       #00ff6e;
-      --accent2:      #10b981;
-      --accent-glow:  rgba(0, 255, 100, 0.38);
-      --accent-sub:   rgba(0, 255, 100, 0.10);
-      --text:         #dfffed;
-      --text2:        #8dc9a8;
-      --text3:        #3d7057;
-      --critical:     #ff3344;
-      --high:         #ff8800;
-      --medium:       #ffc300;
-      --low:          #00ff6e;
-      --info:         #00ccff;
-      --crit-bg:      rgba(255,51,68,.12);
-      --high-bg:      rgba(255,136,0,.12);
-      --med-bg:       rgba(255,195,0,.12);
-      --low-bg:       rgba(0,255,110,.10);
-      --info-bg:      rgba(0,204,255,.10);
-      --grade-a:      #00ff6e;
-      --grade-b:      #10b981;
-      --grade-c:      #ffc300;
-      --grade-d:      #ff8800;
-      --grade-f:      #ff3344;
-      --radius:       14px;
-      --radius-sm:    8px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── CANVAS BG ───────────────────────────────────────────────── */
-    #dash-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      opacity: .55;
-    }
-
-    /* ── LAYOUT ──────────────────────────────────────────────────── */
-    .layout {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* ── HEADER ──────────────────────────────────────────────────── */
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: .8rem 2rem;
-      background: rgba(1, 8, 4, 0.78);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-bottom: 1px solid var(--gb);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .h-logo {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-
-    .h-logo-img {
-      height: 34px;
-      width: auto;
-      filter: drop-shadow(0 0 7px rgba(0,255,110,.48));
-      transition: filter .25s, transform .25s;
-    }
-
-    .h-logo:hover .h-logo-img {
-      filter: drop-shadow(0 0 14px rgba(0,255,110,.8));
-      transform: scale(1.05);
-    }
-
-    .h-scan-info {
-      flex: 1;
-      font-size: .8rem;
-      color: var(--text3);
-      display: flex;
-      align-items: center;
-      gap: 1.2rem;
-      flex-wrap: wrap;
-    }
-
-    .h-scan-info span { color: var(--text2); }
-
-    .h-actions {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-      flex-shrink: 0;
-    }
-
-    .btn-sm {
-      padding: .42rem .9rem;
-      background: var(--glass2);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      color: var(--text2);
-      font-size: .78rem;
-      cursor: pointer;
-      transition: all .2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-    }
-
-    .btn-sm:hover {
-      border-color: var(--accent-glow);
-      color: var(--accent);
-      background: var(--accent-sub);
-    }
-
-    .btn-accent {
-      padding: .5rem 1.2rem;
-      background: var(--accent);
-      border: none;
-      border-radius: var(--radius-sm);
-      color: #010804;
-      font-size: .82rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all .2s;
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      text-decoration: none;
-    }
-
-    .btn-accent:hover {
-      background: #30ffa0;
-      box-shadow: 0 0 18px var(--accent-glow);
-      transform: translateY(-1px);
-    }
-
-    /* ── TABS ────────────────────────────────────────────────────── */
-    .tab-bar {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      padding: 0 2rem;
-      background: rgba(1,8,4,.6);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--gb);
-      overflow-x: auto;
-    }
-
-    .tab-bar::-webkit-scrollbar { height: 2px; }
-    .tab-bar::-webkit-scrollbar-thumb { background: var(--gb); }
-
-    .tab-btn {
-      padding: .9rem 1.4rem;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--text3);
-      font-size: .85rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all .2s;
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-    }
-
-    .tab-btn:hover { color: var(--text2); }
-
-    .tab-btn.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-
-    .tab-count {
-      display: inline-block;
-      padding: .1rem .4rem;
-      background: var(--accent-sub);
-      border-radius: 100px;
-      font-size: .68rem;
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    /* ── MAIN CONTENT ────────────────────────────────────────────── */
-    .main {
-      flex: 1;
-      padding: 1.75rem 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    .tab-panel { display: none; animation: fadeIn .35s ease; }
-    .tab-panel.active { display: block; }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-    /* ── GLASS CARD ──────────────────────────────────────────────── */
-    .card {
-      background: var(--glass);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-
-    .card-title {
-      font-size: .72rem;
-      font-weight: 700;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: .07em;
-      margin-bottom: .9rem;
-    }
-
-    /* ── OVERVIEW ────────────────────────────────────────────────── */
-    .ov-top {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
-    }
-
-    /* Grade */
-    .grade-card {
-      padding: 2rem 2.5rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: .5rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-      min-width: 200px;
-    }
-
-    .grade-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 40%, var(--grade-glow, rgba(0,255,110,.12)) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .grade-letter {
-      font-size: 5.5rem;
-      font-weight: 900;
-      line-height: 1;
-      color: var(--grade-col, var(--accent));
-      text-shadow: 0 0 40px var(--grade-glow, var(--accent-glow)), 0 0 80px var(--grade-glow, var(--accent-glow));
-      transform: perspective(400px) rotateX(8deg);
-      display: block;
-      letter-spacing: -.04em;
-    }
-
-    .grade-score {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--text2);
-    }
-
-    .grade-label {
-      font-size: .72rem;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: .07em;
-    }
-
-    /* Severity summary */
-    .sev-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: .9rem;
-    }
-
-    .sev-card {
-      padding: 1.2rem 1rem;
-      border-radius: var(--radius);
-      display: flex;
-      flex-direction: column;
-      gap: .3rem;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid;
-      backdrop-filter: blur(16px);
-    }
-
-    .sev-card.critical { background: var(--crit-bg); border-color: rgba(255,51,68,.25); }
-    .sev-card.high     { background: var(--high-bg);  border-color: rgba(255,136,0,.25); }
-    .sev-card.medium   { background: var(--med-bg);   border-color: rgba(255,195,0,.25); }
-    .sev-card.low      { background: var(--low-bg);   border-color: rgba(0,255,110,.2);  }
-    .sev-card.info     { background: var(--info-bg);  border-color: rgba(0,204,255,.2);  }
-
-    .sev-num {
-      font-size: 2rem;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .sev-card.critical .sev-num { color: var(--critical); }
-    .sev-card.high     .sev-num { color: var(--high);     }
-    .sev-card.medium   .sev-num { color: var(--medium);   }
-    .sev-card.low      .sev-num { color: var(--low);      }
-    .sev-card.info     .sev-num { color: var(--info);     }
-
-    .sev-lbl {
-      font-size: .7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text3);
-    }
-
-    /* Domain scores */
-    .domain-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .domain-card {
-      padding: 1.4rem 1.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: .7rem;
-      transition: all .3s;
-    }
-
-    .domain-card:hover {
-      border-color: rgba(0,255,100,.3);
-      transform: translateY(-3px);
-      box-shadow: 0 12px 36px rgba(0,0,0,.4);
-    }
-
-    .domain-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .domain-icon { font-size: 1.3rem; }
-
-    .domain-score {
-      font-size: 1.6rem;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .domain-name {
-      font-size: .75rem;
-      font-weight: 700;
-      color: var(--text2);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-
-    .domain-bar-track {
-      height: 5px;
-      background: rgba(255,255,255,.06);
-      border-radius: 100px;
-      overflow: hidden;
-    }
-
-    .domain-bar-fill {
-      height: 100%;
-      border-radius: 100px;
-      transition: width 1s cubic-bezier(.22,1,.36,1);
-      background: linear-gradient(90deg, var(--accent2), var(--accent));
-    }
-
-    /* OWASP */
-    .owasp-section { margin-bottom: 1.25rem; padding: 1.4rem; }
-
-    .owasp-items {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: .7rem;
-    }
-
-    .ow-item {
-      padding: .9rem .8rem;
-      border-radius: 10px;
-      border: 1px solid var(--gb);
-      background: var(--glass2);
-      transition: all .2s;
-    }
-
-    .ow-item.pass {
-      border-color: rgba(0,255,110,.25);
-      background: rgba(0,255,110,.05);
-    }
-
-    .ow-item.fail {
-      border-color: rgba(255,51,68,.25);
-      background: rgba(255,51,68,.06);
-    }
-
-    .ow-item:hover { transform: translateY(-2px); }
-
-    .ow-id {
-      font-size: .65rem;
-      font-weight: 800;
-      letter-spacing: .05em;
-      margin-bottom: .3rem;
-    }
-
-    .ow-item.pass .ow-id { color: var(--accent); }
-    .ow-item.fail .ow-id { color: var(--critical); }
-    .ow-item.neutral .ow-id { color: var(--text3); }
-
-    .ow-name { font-size: .7rem; color: var(--text2); line-height: 1.35; }
-
-    .ow-status {
-      margin-top: .4rem;
-      font-size: .62rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-    }
-
-    .ow-item.pass .ow-status { color: var(--accent); }
-    .ow-item.fail .ow-status { color: var(--critical); }
-    .ow-item.neutral .ow-status { color: var(--text3); }
-
-    /* ── FINDINGS TAB ────────────────────────────────────────────── */
-    .filter-bar {
-      display: flex;
-      gap: .75rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.25rem;
-      align-items: center;
-    }
-
-    .filter-select, .filter-input {
-      padding: .5rem .9rem;
-      background: var(--glass);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: .82rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .filter-select:focus, .filter-input:focus { border-color: var(--accent-glow); }
-    .filter-input { flex: 1; min-width: 180px; }
-
-    option { background: #061510; }
-
-    .findings-count {
-      margin-left: auto;
-      font-size: .78rem;
-      color: var(--text3);
-    }
-
-    .table-wrap {
-      border-radius: var(--radius);
-      overflow: auto;
-      border: 1px solid var(--gb);
-      background: var(--glass);
-    }
-
-    table.findings {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: .83rem;
-    }
-
-    .findings thead th {
-      padding: .9rem 1rem;
-      text-align: left;
-      font-size: .7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text3);
-      background: rgba(0,0,0,.3);
-      border-bottom: 1px solid var(--gb);
-      cursor: pointer;
-      white-space: nowrap;
-      user-select: none;
-    }
-
-    .findings thead th:hover { color: var(--accent); }
-    .findings thead th.sort-asc  .sort-icon::after { content: ' ↑'; color: var(--accent); }
-    .findings thead th.sort-desc .sort-icon::after { content: ' ↓'; color: var(--accent); }
-    .sort-icon { opacity: .4; font-size: .7rem; }
-
-    .findings tbody tr {
-      border-bottom: 1px solid rgba(0,255,100,.05);
-      cursor: pointer;
-      transition: background .15s;
-    }
-
-    .findings tbody tr:last-child { border-bottom: none; }
-    .findings tbody tr:hover { background: rgba(0,255,100,.04); }
-
-    .findings td {
-      padding: .85rem 1rem;
-      vertical-align: middle;
-    }
-
-    .finding-title {
-      font-weight: 600;
-      color: var(--text);
-      max-width: 340px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .sev-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: .22rem .65rem;
-      border-radius: 100px;
-      font-size: .68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      white-space: nowrap;
-    }
-
-    .sev-badge.critical { background: var(--crit-bg); color: var(--critical); border: 1px solid rgba(255,51,68,.3); }
-    .sev-badge.high     { background: var(--high-bg);  color: var(--high);     border: 1px solid rgba(255,136,0,.3); }
-    .sev-badge.medium   { background: var(--med-bg);   color: var(--medium);   border: 1px solid rgba(255,195,0,.3); }
-    .sev-badge.low      { background: var(--low-bg);   color: var(--low);      border: 1px solid rgba(0,255,110,.25);}
-    .sev-badge.info     { background: var(--info-bg);  color: var(--info);     border: 1px solid rgba(0,204,255,.25);}
-
-    .domain-badge {
-      display: inline-block;
-      padding: .18rem .55rem;
-      background: var(--glass2);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      font-size: .68rem;
-      color: var(--text2);
-      text-transform: uppercase;
-    }
-
-    .cvss-score { font-weight: 700; font-size: .9rem; }
-
-    .owasp-tag {
-      display: inline-block;
-      padding: .15rem .5rem;
-      background: rgba(0,204,255,.08);
-      border: 1px solid rgba(0,204,255,.2);
-      border-radius: var(--radius-sm);
-      font-size: .68rem;
-      color: var(--info);
-      font-weight: 600;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--text3);
-    }
-
-    .empty-state .es-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
-    .empty-state .es-title { font-size: 1rem; font-weight: 600; color: var(--text2); margin-bottom: .4rem; }
-
-    /* ── DRAWER ──────────────────────────────────────────────────── */
-    .drawer-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.6);
-      backdrop-filter: blur(4px);
-      z-index: 400;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .3s;
-    }
-
-    .drawer-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .drawer {
-      position: fixed;
-      top: 0; right: 0;
-      width: min(560px, 95vw);
-      height: 100%;
-      background: rgba(2, 12, 6, 0.97);
-      border-left: 1px solid var(--gb);
-      backdrop-filter: blur(30px);
-      z-index: 500;
-      transform: translateX(100%);
-      transition: transform .35s cubic-bezier(.22,1,.36,1);
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .drawer.open { transform: none; }
-
-    .drawer::-webkit-scrollbar { width: 4px; }
-    .drawer::-webkit-scrollbar-thumb { background: var(--gb); border-radius: 2px; }
-
-    .drawer-header {
-      padding: 1.5rem 1.75rem 1.25rem;
-      border-bottom: 1px solid var(--gb);
-      position: sticky;
-      top: 0;
-      background: rgba(2,12,6,.98);
-      z-index: 1;
-    }
-
-    .drawer-close {
-      position: absolute;
-      top: 1.2rem; right: 1.5rem;
-      width: 30px; height: 30px;
-      background: var(--glass2);
-      border: 1px solid var(--gb);
-      border-radius: 50%;
-      color: var(--text2);
-      cursor: pointer;
-      font-size: .9rem;
-      display: grid;
-      place-items: center;
-      transition: all .2s;
-    }
-
-    .drawer-close:hover { background: var(--accent-sub); color: var(--accent); border-color: var(--accent-glow); }
-
-    .drawer-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: .6rem;
-      padding-right: 2.5rem;
-      line-height: 1.4;
-    }
-
-    .drawer-badges { display: flex; gap: .5rem; flex-wrap: wrap; }
-
-    .drawer-body {
-      padding: 1.5rem 1.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      flex: 1;
-    }
-
-    .d-section-title {
-      font-size: .7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--text3);
-      margin-bottom: .7rem;
-    }
-
-    .cvss-box {
-      background: var(--glass2);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
-
-    .cvss-score-main {
-      padding: 1.2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      border-bottom: 1px solid var(--gb);
-    }
-
-    .cvss-big {
-      font-size: 2.4rem;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .cvss-vector-text {
-      font-family: 'Courier New', monospace;
-      font-size: .7rem;
-      color: var(--text3);
-      word-break: break-all;
-    }
-
-    .cvss-breakdown-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .cvss-metric {
-      padding: .6rem .9rem;
-      border-right: 1px solid var(--gb);
-      border-bottom: 1px solid var(--gb);
-    }
-
-    .cvss-metric:nth-child(even) { border-right: none; }
-
-    .cvss-metric-name {
-      font-size: .65rem;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      margin-bottom: .2rem;
-    }
-
-    .cvss-metric-val {
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .evidence-box {
-      background: rgba(0,0,0,.4);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      font-family: 'Courier New', monospace;
-      font-size: .73rem;
-      color: var(--text2);
-      white-space: pre-wrap;
-      word-break: break-all;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .evidence-box::-webkit-scrollbar { width: 3px; }
-    .evidence-box::-webkit-scrollbar-thumb { background: var(--gb); }
-
-    .remediation-box {
-      background: rgba(0,255,110,.04);
-      border: 1px solid rgba(0,255,110,.18);
-      border-radius: var(--radius-sm);
-      padding: 1rem 1.1rem;
-      font-size: .85rem;
-      color: var(--text2);
-      line-height: 1.65;
-    }
-
-    /* ── HISTORY TAB ─────────────────────────────────────────────── */
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: .9rem;
-    }
-
-    .hist-card {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      padding: 1.2rem 1.5rem;
-      border-radius: var(--radius);
-      border: 1px solid var(--gb);
-      background: var(--glass);
-      cursor: pointer;
-      transition: all .25s;
-    }
-
-    .hist-card:hover {
-      border-color: rgba(0,255,100,.3);
-      background: rgba(0,255,100,.03);
-      transform: translateX(4px);
-    }
-
-    .hist-grade {
-      width: 52px; height: 52px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      font-size: 1.5rem;
-      font-weight: 900;
-      flex-shrink: 0;
-      border: 2px solid;
-    }
-
-    .hist-grade[data-grade="A"] { color: var(--grade-a); border-color: var(--grade-a); background: rgba(0,255,110,.1); }
-    .hist-grade[data-grade="B"] { color: var(--grade-b); border-color: var(--grade-b); background: rgba(16,185,129,.1); }
-    .hist-grade[data-grade="C"] { color: var(--grade-c); border-color: var(--grade-c); background: rgba(255,195,0,.1); }
-    .hist-grade[data-grade="D"] { color: var(--grade-d); border-color: var(--grade-d); background: rgba(255,136,0,.1); }
-    .hist-grade[data-grade="F"] { color: var(--grade-f); border-color: var(--grade-f); background: rgba(255,51,68,.1); }
-
-    .hist-info { flex: 1; }
-
-    .hist-host {
-      font-size: .95rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: .2rem;
-    }
-
-    .hist-meta {
-      font-size: .75rem;
-      color: var(--text3);
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .hist-meta span { color: var(--text2); }
-
-    .hist-findings { text-align: right; flex-shrink: 0; }
-    .hist-findings .num { font-size: 1.3rem; font-weight: 800; color: var(--text); line-height: 1; }
-    .hist-findings .lbl { font-size: .68rem; color: var(--text3); }
-
-    /* ── COMPARE TAB ─────────────────────────────────────────────── */
-    .compare-selectors {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 1rem;
-      align-items: center;
-      margin-bottom: 1.75rem;
-      padding: 1.5rem;
-    }
-
-    .compare-vs {
-      text-align: center;
-      font-weight: 700;
-      color: var(--text3);
-      font-size: .85rem;
-    }
-
-    .cmp-select {
-      width: 100%;
-      padding: .65rem 1rem;
-      background: var(--glass2);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: .85rem;
-      outline: none;
-    }
-
-    .cmp-select:focus { border-color: var(--accent-glow); }
-
-    .compare-run { text-align: center; margin-bottom: 1.5rem; }
-
-    .cmp-result {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
-    }
-
-    .cmp-col {
-      background: var(--glass);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-    }
-
-    .cmp-col-title {
-      font-size: .72rem;
-      font-weight: 700;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: .07em;
-      margin-bottom: 1rem;
-    }
-
-    .cmp-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: .5rem 0;
-      border-bottom: 1px solid rgba(0,255,100,.05);
-      font-size: .85rem;
-    }
-
-    .cmp-row:last-child { border-bottom: none; }
-    .cmp-row .lbl { color: var(--text3); }
-    .cmp-row .val { font-weight: 700; color: var(--text); }
-
-    .delta {
-      font-size: .75rem;
-      font-weight: 700;
-      padding: .15rem .4rem;
-      border-radius: 4px;
-    }
-
-    .delta.pos { background: rgba(0,255,110,.1); color: var(--accent); }
-    .delta.neg { background: rgba(255,51,68,.1);  color: var(--critical); }
-    .delta.neu { background: var(--glass2); color: var(--text3); }
-
-    /* ── LOADING ─────────────────────────────────────────────────── */
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(1,8,4,.85);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      backdrop-filter: blur(8px);
-    }
-
-    .loading-overlay.hidden { display: none; }
-
-    .spinner {
-      width: 44px; height: 44px;
-      border: 3px solid rgba(0,255,110,.15);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: .85rem; color: var(--text3); }
-
-    /* ── NO SCAN ─────────────────────────────────────────────────── */
-    .no-scan {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 60vh;
-      text-align: center;
-      gap: 1rem;
-    }
-
-    .no-scan .ns-icon { font-size: 3.5rem; }
-    .no-scan .ns-title { font-size: 1.3rem; font-weight: 700; color: var(--text2); }
-    .no-scan .ns-desc { font-size: .88rem; color: var(--text3); max-width: 400px; }
-
-    .code-block {
-      background: rgba(0,0,0,.5);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      padding: .9rem 1.2rem;
-      font-family: 'Courier New', monospace;
-      font-size: .82rem;
-      color: var(--accent);
-    }
-
-    .scan-selector {
-      padding: .48rem .9rem;
-      background: var(--glass);
-      border: 1px solid var(--gb);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: .8rem;
-      outline: none;
-      cursor: pointer;
-      max-width: 260px;
-    }
-
-    .scan-selector:focus { border-color: var(--accent-glow); }
-
-    /* ── RESPONSIVE ──────────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      .ov-top { grid-template-columns: 1fr; }
-      .domain-row { grid-template-columns: repeat(2, 1fr); }
-      .cmp-result { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 600px) {
-      .main { padding: 1.25rem 1rem; }
-      .header { padding: .7rem 1rem; }
-      .tab-bar { padding: 0 .5rem; }
-      .domain-row { grid-template-columns: 1fr 1fr; }
-      .compare-selectors { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetSentinel — Security Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── TOKENS ─────────────────────────────────────────────────────── */
+:root{
+  --bg:#010804;--bg2:#030f07;--bg3:#061510;
+  --glass:rgba(3,16,8,.85);--glass2:rgba(0,22,10,.60);
+  --gb:rgba(0,255,100,.14);--gb2:rgba(0,255,100,.08);
+  --accent:#00ff6e;--accent2:#10b981;--accent-glow:rgba(0,255,100,.35);
+  --accent-sub:rgba(0,255,100,.10);--accent-dim:rgba(0,255,100,.06);
+  --text:#dfffed;--text2:#8dc9a8;--text3:#3d7057;
+  --critical:#ff3344;--high:#ff8800;--medium:#ffc300;--low:#00ff6e;--info:#00ccff;
+  --crit-bg:rgba(255,51,68,.12);--high-bg:rgba(255,136,0,.12);
+  --med-bg:rgba(255,195,0,.12);--low-bg:rgba(0,255,110,.10);--info-bg:rgba(0,204,255,.10);
+  --sidebar-w:280px;--chat-w:360px;--radius:14px;--radius-sm:8px;
+  --transition:.18s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+
+/* ── LOADING ─────────────────────────────────────────────────────── */
+#loading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .5s}
+#loading.fade{opacity:0;pointer-events:none}
+.ld-radar{position:relative;width:140px;height:140px}
+.ld-radar svg{width:100%;height:100%}
+.radar-ring{fill:none;stroke:var(--gb);stroke-width:1}
+.radar-cross{stroke:var(--gb);stroke-width:.6}
+.radar-sweep{transform-origin:70px 70px;animation:sweep 2.2s linear infinite}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.ld-logo{font-size:22px;font-weight:700;color:var(--accent);letter-spacing:1px}
+.ld-sub{font-size:11px;color:var(--text3);letter-spacing:3px;text-transform:uppercase}
+.ld-status{font-size:11px;color:var(--text2);min-height:16px}
+.ld-bar{width:200px;height:3px;background:var(--gb);border-radius:2px;overflow:hidden}
+.ld-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0;transition:width .4s ease;animation:indeterminate 1.6s ease-in-out infinite}
+@keyframes indeterminate{0%{margin-left:-60%;width:60%}100%{margin-left:100%;width:60%}}
+
+/* ── APP SHELL ───────────────────────────────────────────────────── */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── BG CANVAS ───────────────────────────────────────────────────── */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.4}
+
+/* ── LEFT SIDEBAR ────────────────────────────────────────────────── */
+#left-sidebar{
+  position:relative;z-index:2;
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--glass);backdrop-filter:blur(24px);
+  border-right:1px solid var(--gb);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;border-bottom:1px solid var(--gb)}
+.sb-logo img{width:28px;height:28px;object-fit:contain}
+.sb-logo-text{font-size:15px;font-weight:700;color:var(--accent)}
+.sb-logo-sub{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+
+/* Scan form */
+.sb-scan{padding:14px 14px 10px;border-bottom:1px solid var(--gb)}
+.sb-section-title{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.scan-type-row{display:flex;gap:4px;margin-bottom:10px}
+.scan-type-btn{flex:1;padding:5px 0;border:1px solid var(--gb);background:transparent;color:var(--text2);border-radius:var(--radius-sm);font-family:'Poppins',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:var(--transition)}
+.scan-type-btn.active{background:var(--accent-sub);border-color:var(--accent);color:var(--accent)}
+.scan-type-btn:hover:not(.active){background:var(--gb2);color:var(--text)}
+.sb-input-group{margin-bottom:8px}
+.sb-input-group label{display:block;font-size:9px;font-weight:500;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.sb-input{width:100%;padding:7px 10px;background:var(--bg2);border:1px solid var(--gb);border-radius:var(--radius-sm);color:var(--text);font-family:'Poppins',sans-serif;font-size:11px;outline:none;transition:var(--transition)}
+.sb-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-sub)}
+.sb-input::placeholder{color:var(--text3)}
+.run-btn{width:100%;margin-top:4px;padding:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius-sm);color:#010804;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:var(--transition)}
+.run-btn:hover{opacity:.88;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow)}
+.run-btn:active{transform:translateY(0)}
+.run-btn svg{width:14px;height:14px}
+
+/* Scan list */
+.sb-scans{flex:1;overflow-y:auto;padding:10px 14px}
+.sb-scans::-webkit-scrollbar{width:3px}
+.sb-scans::-webkit-scrollbar-track{background:transparent}
+.sb-scans::-webkit-scrollbar-thumb{background:var(--gb)}
+.scan-item{padding:9px 10px;border:1px solid var(--gb);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:var(--transition);position:relative;overflow:hidden}
+.scan-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--text3);transition:var(--transition)}
+.scan-item:hover{background:var(--gb2);border-color:var(--accent2)}
+.scan-item:hover::before,.scan-item.active::before{background:var(--accent)}
+.scan-item.active{background:var(--accent-sub);border-color:var(--accent)}
+.si-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.si-target{font-size:10px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.si-grade{font-size:11px;font-weight:700}
+.grade-A{color:var(--low)}.grade-B{color:var(--accent2)}.grade-C{color:var(--medium)}.grade-D{color:var(--high)}.grade-F{color:var(--critical)}
+.si-meta{font-size:9px;color:var(--text3)}
+
+/* ── MAIN CONTENT ────────────────────────────────────────────────── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--gb);flex-shrink:0}
+.topbar-left h1{font-size:15px;font-weight:700;color:var(--text)}
+.topbar-left .tb-meta{font-size:10px;color:var(--text3);margin-top:1px}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.tb-btn{padding:6px 14px;border:1px solid var(--gb);background:transparent;color:var(--text2);border-radius:var(--radius-sm);font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:var(--transition)}
+.tb-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-sub)}
+.tb-btn svg{width:12px;height:12px}
+.tb-btn.primary{background:var(--accent-sub);border-color:var(--accent);color:var(--accent)}
+
+/* Tabs */
+.tabs{display:flex;gap:0;padding:0 20px;background:var(--glass2);border-bottom:1px solid var(--gb);flex-shrink:0}
+.tab{padding:10px 18px;border:none;background:transparent;color:var(--text3);font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:var(--transition);position:relative}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Tab content area */
+.tab-content{display:none;flex:1;overflow-y:auto;padding:16px 20px;gap:14px;flex-direction:column}
+.tab-content.active{display:flex}
+.tab-content::-webkit-scrollbar{width:4px}
+.tab-content::-webkit-scrollbar-track{background:transparent}
+.tab-content::-webkit-scrollbar-thumb{background:var(--gb);border-radius:2px}
+
+/* ── CARD PRIMITIVES ─────────────────────────────────────────────── */
+.card{background:var(--glass);border:1px solid var(--gb);border-radius:var(--radius);backdrop-filter:blur(16px);position:relative;overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid var(--gb2)}
+.card-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px}
+.card-title svg{width:12px;height:12px;color:var(--accent)}
+.card-body{padding:12px 14px}
+
+/* ── SPARKLE BUTTON ──────────────────────────────────────────────── */
+.sparkle-btn{
+  width:26px;height:26px;border:1px solid var(--gb);background:var(--gb2);
+  border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:var(--transition);flex-shrink:0;color:var(--text3)
+}
+.sparkle-btn:hover{border-color:var(--accent);background:var(--accent-sub);color:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
+.sparkle-btn svg{width:13px;height:13px;pointer-events:none}
+
+/* ── SCORE CARDS ROW ─────────────────────────────────────────────── */
+.score-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.score-card{padding:14px;border-radius:var(--radius);border:1px solid var(--gb);background:var(--glass);text-align:center;position:relative;transition:var(--transition)}
+.score-card:hover{border-color:var(--accent2);box-shadow:0 0 16px var(--accent-sub)}
+.sc-sparkle{position:absolute;top:8px;right:8px}
+.sc-value{font-size:28px;font-weight:800;color:var(--accent);line-height:1;margin:8px 0 2px}
+.sc-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:500}
+.sc-grade{font-size:11px;font-weight:700;margin-top:4px}
+
+/* ── CHARTS GRID ─────────────────────────────────────────────────── */
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.charts-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.chart-wrap{position:relative;padding:6px 0}
+canvas.chart-canvas{display:block;max-height:220px}
+
+/* ── FINDINGS ────────────────────────────────────────────────────── */
+.findings-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sev-filter{padding:4px 10px;border-radius:20px;border:1px solid var(--gb);background:transparent;color:var(--text2);font-family:'Poppins',sans-serif;font-size:10px;cursor:pointer;transition:var(--transition)}
+.sev-filter.active,.sev-filter:hover{background:var(--accent-sub);border-color:var(--accent);color:var(--accent)}
+.finding-item{border:1px solid var(--gb);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;background:var(--glass2);transition:var(--transition);cursor:pointer;position:relative}
+.finding-item:hover{border-color:var(--accent2);background:var(--gb2)}
+.finding-item.expanded .fi-desc{display:block}
+.fi-header{display:flex;align-items:flex-start;gap:8px}
+.sev-badge{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;margin-top:1px}
+.sev-critical{background:var(--crit-bg);color:var(--critical);border:1px solid var(--critical)}
+.sev-high{background:var(--high-bg);color:var(--high);border:1px solid var(--high)}
+.sev-medium{background:var(--med-bg);color:var(--medium);border:1px solid var(--medium)}
+.sev-low{background:var(--low-bg);color:var(--low);border:1px solid var(--low)}
+.sev-info{background:var(--info-bg);color:var(--info);border:1px solid var(--info)}
+.fi-title{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.fi-meta{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
+.fi-tag{font-size:9px;color:var(--text3);background:var(--bg2);border:1px solid var(--gb);padding:1px 6px;border-radius:4px}
+.fi-desc{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--gb);font-size:11px;color:var(--text2);line-height:1.6}
+.fi-sparkle{position:absolute;top:8px;right:8px}
+.fi-cvss{font-size:9px;font-weight:700;color:var(--accent2);background:var(--accent-sub);padding:2px 6px;border-radius:4px}
+
+/* ── HISTORY ─────────────────────────────────────────────────────── */
+.history-donuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:12px}
+.hd-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border:1px solid var(--gb);border-radius:var(--radius-sm);background:var(--glass2)}
+.hd-canvas-wrap{position:relative;width:70px;height:70px}
+.hd-canvas-wrap canvas{width:70px!important;height:70px!important}
+.hd-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.hd-grade{font-size:18px;font-weight:800}
+.hd-score{font-size:8px;color:var(--text3)}
+.hd-date{font-size:8px;color:var(--text3)}
+.hd-target{font-size:9px;color:var(--text2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+
+/* ── COMPARE ─────────────────────────────────────────────────────── */
+.compare-selectors{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
+.compare-select-group{flex:1;min-width:200px}
+.compare-select-group label{display:block;font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.sb-select{width:100%;padding:7px 10px;background:var(--bg2);border:1px solid var(--gb);border-radius:var(--radius-sm);color:var(--text);font-family:'Poppins',sans-serif;font-size:11px;outline:none;cursor:pointer}
+.sb-select:focus{border-color:var(--accent)}
+.compare-btn{padding:8px 18px;background:var(--accent-sub);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--accent);font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition)}
+.compare-btn:hover{background:var(--accent);color:#010804}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compare-meta-col{display:flex;flex-direction:column;gap:8px}
+.compare-stat{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border:1px solid var(--gb);border-radius:var(--radius-sm);background:var(--glass2)}
+.cs-label{font-size:10px;color:var(--text3)}
+.cs-val{font-size:11px;font-weight:700;color:var(--text)}
+.compare-ai{padding:14px;border:1px solid var(--gb);border-radius:var(--radius);background:var(--glass2);font-size:11px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-top:12px}
+.compare-ai h4,.compare-ai strong,.compare-ai b{color:var(--accent);font-weight:600}
+.delta-pos{color:var(--low)!important}.delta-neg{color:var(--critical)!important}
+
+/* ── HEATMAP ─────────────────────────────────────────────────────── */
+#heatmap-canvas{cursor:crosshair}
+
+/* ── BENCHMARK TABLE ─────────────────────────────────────────────── */
+.bench-row{display:grid;grid-template-columns:80px 1fr 60px 60px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--gb2)}
+.bench-label{font-size:10px;color:var(--text2);font-weight:500}
+.bench-bar-wrap{position:relative;height:6px;background:var(--bg2);border-radius:3px;overflow:visible}
+.bench-bar-track{position:absolute;inset:0;border-radius:3px;overflow:hidden}
+.bench-bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.bench-bar-avg{position:absolute;top:-3px;width:2px;height:12px;background:rgba(255,255,255,.3);border-radius:1px}
+.bench-val{font-size:11px;font-weight:700;color:var(--text);text-align:right}
+.bench-diff{font-size:10px;text-align:right}
+
+/* ── CHAT SIDEBAR ────────────────────────────────────────────────── */
+#chat-sidebar{
+  position:fixed;right:0;top:0;bottom:0;width:var(--chat-w);z-index:50;
+  background:var(--glass);backdrop-filter:blur(28px);border-left:1px solid var(--gb);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+#chat-sidebar.open{transform:translateX(0)}
+.chat-header{padding:14px 14px 10px;border-bottom:1px solid var(--gb);flex-shrink:0}
+.chat-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.chat-title{font-size:13px;font-weight:700;color:var(--accent)}
+.chat-close{width:24px;height:24px;border:none;background:transparent;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;border-radius:4px;transition:var(--transition)}
+.chat-close:hover{background:var(--gb2);color:var(--text)}
+.model-selector{display:flex;gap:4px}
+.model-btn{padding:3px 10px;border:1px solid var(--gb);background:transparent;border-radius:20px;color:var(--text3);font-family:'Poppins',sans-serif;font-size:9px;font-weight:600;cursor:pointer;transition:var(--transition);text-transform:uppercase;letter-spacing:.5px}
+.model-btn.active{background:var(--accent-sub);border-color:var(--accent);color:var(--accent)}
+.model-btn:hover:not(.active){background:var(--gb2);color:var(--text2)}
+.chat-messages{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.chat-messages::-webkit-scrollbar{width:3px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--gb)}
+.chat-msg{max-width:92%;padding:8px 11px;border-radius:10px;font-size:11px;line-height:1.6}
+.chat-msg.user{align-self:flex-end;background:var(--accent-sub);border:1px solid var(--accent);color:var(--text);border-bottom-right-radius:3px}
+.chat-msg.assistant{align-self:flex-start;background:var(--glass2);border:1px solid var(--gb);color:var(--text2);border-bottom-left-radius:3px}
+.chat-msg.thinking{color:var(--text3);font-style:italic}
+.chat-msg strong,.chat-msg b{color:var(--accent)}
+.chat-footer{padding:10px 12px;border-top:1px solid var(--gb);flex-shrink:0}
+.chat-input-row{display:flex;gap:6px}
+.chat-input{flex:1;padding:8px 10px;background:var(--bg2);border:1px solid var(--gb);border-radius:var(--radius-sm);color:var(--text);font-family:'Poppins',sans-serif;font-size:11px;outline:none;transition:var(--transition)}
+.chat-input:focus{border-color:var(--accent)}
+.chat-input::placeholder{color:var(--text3)}
+.chat-send{width:34px;height:34px;background:var(--accent-sub);border:1px solid var(--accent);border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0}
+.chat-send:hover{background:var(--accent)}
+.chat-send svg{width:14px;height:14px;color:var(--accent)}
+.chat-send:hover svg{color:#010804}
+
+/* ── CHAT FAB ────────────────────────────────────────────────────── */
+#chat-fab{
+  position:fixed;bottom:24px;right:24px;width:60px;height:60px;
+  border-radius:50%;border:none;cursor:pointer;z-index:49;
+  background:linear-gradient(135deg,rgba(0,255,110,.9),rgba(16,185,129,.9));
+  box-shadow:0 4px 24px rgba(0,255,110,.35);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .2s,box-shadow .2s;
+}
+#chat-fab:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(0,255,110,.5)}
+.fab-inner{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:14px;position:relative}
+.fab-dot{width:8px;height:8px;border-radius:50%;background:rgba(1,8,4,.85)}
+.fab-dot:nth-child(3){grid-column:1/3;justify-self:center}
+
+/* ── SPARKLE MODAL ───────────────────────────────────────────────── */
+#sparkle-overlay{position:fixed;inset:0;z-index:200;background:rgba(1,8,4,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center}
+#sparkle-overlay.open{display:flex}
+.sparkle-modal{width:440px;max-width:90vw;max-height:80vh;overflow-y:auto;background:var(--glass);border:1px solid var(--accent);border-radius:var(--radius);box-shadow:0 0 40px var(--accent-glow);padding:20px}
+.sm-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sm-icon{width:28px;height:28px;background:var(--accent-sub);border:1px solid var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--accent)}
+.sm-icon svg{width:14px;height:14px}
+.sm-title{font-size:13px;font-weight:700;color:var(--accent);flex:1}
+.sm-close{background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.sm-close:hover{color:var(--text);background:var(--gb2)}
+.sm-close svg{width:16px;height:16px}
+.sm-body{font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap}
+.sm-body strong,.sm-body b{color:var(--accent)}
+.sm-loading{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px}
+.sm-spinner{width:16px;height:16px;border:2px solid var(--gb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SCAN PROGRESS MODAL ─────────────────────────────────────────── */
+#progress-overlay{position:fixed;inset:0;z-index:300;background:rgba(1,8,4,.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center}
+#progress-overlay.open{display:flex}
+.progress-modal{width:400px;padding:28px;background:var(--glass);border:1px solid var(--gb);border-radius:var(--radius);text-align:center}
+.pm-radar{margin:0 auto 16px;width:80px;height:80px}
+.pm-radar svg{width:100%;height:100%}
+.pm-title{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.pm-step{font-size:11px;color:var(--text2);margin-bottom:14px;min-height:16px}
+.pm-bar{height:4px;background:var(--gb);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.pm-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s ease;border-radius:2px;width:0}
+.pm-pct{font-size:10px;color:var(--text3)}
+
+/* ── EMPTY / PLACEHOLDER ─────────────────────────────────────────── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--text3);text-align:center;flex:1}
+.empty-state svg{width:40px;height:40px;opacity:.4}
+.empty-state p{font-size:12px}
+
+/* ── MISC ────────────────────────────────────────────────────────── */
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>.card{flex:1;min-width:220px}
+.divider{height:1px;background:var(--gb);margin:4px 0}
+.tag{font-size:9px;padding:2px 7px;border-radius:20px;border:1px solid var(--gb);background:var(--gb2);color:var(--text3)}
+.tooltip{position:relative}
+.tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#010804;border:1px solid var(--gb);border-radius:6px;padding:4px 8px;font-size:10px;color:var(--text2);white-space:nowrap;z-index:100}
+</style>
 </head>
 <body>
 
-<!-- Canvas background -->
-<canvas id="dash-canvas"></canvas>
-
-<!-- Loading overlay -->
-<div id="loading" class="loading-overlay">
-  <div class="spinner"></div>
-  <div class="loading-text">Loading scan data…</div>
-</div>
-
-<!-- Drawer overlay -->
-<div id="drawer-overlay" class="drawer-overlay" onclick="closeDrawer()"></div>
-
-<!-- Finding drawer -->
-<div id="finding-drawer" class="drawer">
-  <div class="drawer-header">
-    <button class="drawer-close" onclick="closeDrawer()">✕</button>
-    <div class="drawer-title" id="drawer-title">Finding Details</div>
-    <div class="drawer-badges" id="drawer-badges"></div>
+<!-- ── LOADING SCREEN ──────────────────────────────────────────── -->
+<div id="loading">
+  <div class="ld-radar">
+    <svg viewBox="0 0 140 140">
+      <circle class="radar-ring" cx="70" cy="70" r="60"/>
+      <circle class="radar-ring" cx="70" cy="70" r="40" opacity=".6"/>
+      <circle class="radar-ring" cx="70" cy="70" r="20" opacity=".4"/>
+      <line class="radar-cross" x1="10" y1="70" x2="130" y2="70"/>
+      <line class="radar-cross" x1="70" y1="10" x2="70" y2="130"/>
+      <g class="radar-sweep">
+        <path d="M70 70 L70 10 A60 60 0 0 1 130 70 Z" fill="url(#sweep-grad)" opacity=".6"/>
+        <defs>
+          <radialGradient id="sweep-grad" cx="0%" cy="0%" r="100%">
+            <stop offset="0%" stop-color="#00ff6e" stop-opacity=".8"/>
+            <stop offset="100%" stop-color="#00ff6e" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+      </g>
+      <circle cx="70" cy="70" r="4" fill="#00ff6e"/>
+    </svg>
   </div>
-  <div class="drawer-body" id="drawer-body"></div>
+  <div class="ld-logo">NetSentinel</div>
+  <div class="ld-sub">Security Intelligence Platform</div>
+  <div class="ld-status" id="ld-status">Loading scan data…</div>
+  <div class="ld-bar"><div class="ld-fill" id="ld-fill"></div></div>
 </div>
 
-<!-- Main layout -->
-<div class="layout">
+<!-- ── BACKGROUND CANVAS ──────────────────────────────────────── -->
+<canvas id="bg-canvas"></canvas>
 
-  <!-- Header -->
-  <header class="header">
-    <a href="/" class="h-logo">
-      <img src="/logo.png" alt="NetSentinel" class="h-logo-img">
-    </a>
-    <div class="h-scan-info" id="scan-info">
-      <span id="scan-meta-text" style="color:var(--text3)">No scan loaded</span>
-    </div>
-    <div class="h-actions">
-      <select class="scan-selector" id="scan-selector" onchange="handleScanSelect(this.value)">
-        <option value="">Loading…</option>
-      </select>
-      <button class="btn-sm" onclick="loadScans()">↺ Refresh</button>
-      <a href="/" class="btn-sm">← Home</a>
-    </div>
-  </header>
+<!-- ── APP ────────────────────────────────────────────────────── -->
+<div id="app" style="display:none">
 
-  <!-- Tab bar -->
-  <nav class="tab-bar">
-    <button class="tab-btn active" data-tab="overview">Overview</button>
-    <button class="tab-btn" data-tab="findings">
-      Findings <span class="tab-count" id="findings-count">0</span>
-    </button>
-    <button class="tab-btn" data-tab="history">History</button>
-    <button class="tab-btn" data-tab="compare">Compare</button>
-  </nav>
-
-  <!-- Content -->
-  <main class="main">
-
-    <!-- OVERVIEW -->
-    <div id="tab-overview" class="tab-panel active">
-      <div id="ov-content">
-        <div class="no-scan">
-          <div class="ns-icon">🛡️</div>
-          <div class="ns-title">No scan selected</div>
-          <p class="ns-desc">Run a scan with the CLI then select it from the dropdown above, or click a scan in the History tab.</p>
-          <div class="code-block">netsentinel scan --host example.com</div>
-        </div>
+  <!-- LEFT SIDEBAR -->
+  <aside id="left-sidebar">
+    <div class="sb-logo">
+      <img src="/logo.png" alt="N" onerror="this.style.display='none'">
+      <div>
+        <div class="sb-logo-text">NetSentinel</div>
+        <div class="sb-logo-sub">Security Audit</div>
       </div>
     </div>
 
-    <!-- FINDINGS -->
-    <div id="tab-findings" class="tab-panel">
-      <div id="findings-content">
-        <div class="empty-state">
-          <span class="es-icon">🔍</span>
-          <div class="es-title">No findings to display</div>
-          <p>Select a scan from the dropdown to view findings.</p>
-        </div>
+    <div class="sb-scan">
+      <div class="sb-section-title">New Scan</div>
+      <div class="scan-type-row">
+        <button class="scan-type-btn active" data-type="both">Full</button>
+        <button class="scan-type-btn" data-type="static">Static</button>
+        <button class="scan-type-btn" data-type="live">Live</button>
+      </div>
+      <div class="sb-input-group" id="target-group">
+        <label>Target — path or GitHub URL</label>
+        <input class="sb-input" id="scan-target" type="text" placeholder="./myapp or github.com/user/repo">
+      </div>
+      <div class="sb-input-group" id="host-group">
+        <label>Host — domain or IP</label>
+        <input class="sb-input" id="scan-host" type="text" placeholder="example.com or 192.168.1.1">
+      </div>
+      <button class="run-btn" id="run-btn" onclick="runScan()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run Scan
+      </button>
+    </div>
+
+    <div class="sb-scans">
+      <div class="sb-section-title">Scan History</div>
+      <div id="scan-list"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main id="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="tb-title">Select a scan</h1>
+        <div class="tb-meta" id="tb-meta"></div>
+      </div>
+      <div class="topbar-right">
+        <button class="tb-btn" onclick="downloadPdf()" id="pdf-btn" style="display:none" title="Download PDF Report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Download Report
+        </button>
+        <button class="tb-btn primary" onclick="openAiSummary()" id="ai-btn" style="display:none" title="AI Summary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5.5 14l.8 2.4L8.7 17l-2.4.8L5.5 20l-.8-2.4L2.3 17l2.4-.8L5.5 14zM18.5 12l.8 2.4L21.7 15l-2.4.8L18.5 18l-.8-2.4L15.3 15l2.4-.8L18.5 12z"/></svg>
+          AI Analysis
+        </button>
       </div>
     </div>
 
-    <!-- HISTORY -->
-    <div id="tab-history" class="tab-panel">
-      <div id="history-list" class="history-list">
-        <div class="empty-state">
-          <span class="es-icon">📂</span>
-          <div class="es-title">No scans in history</div>
-          <p>Run your first scan to see results here.</p>
-        </div>
-      </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="findings">Findings</button>
+      <button class="tab" data-tab="history">History</button>
+      <button class="tab" data-tab="compare">Compare</button>
     </div>
 
-    <!-- COMPARE -->
-    <div id="tab-compare" class="tab-panel">
-      <div class="card compare-selectors">
-        <div>
-          <div class="card-title" style="margin-bottom:.5rem">Scan A</div>
-          <select class="cmp-select" id="cmp-a"><option value="">— Select scan —</option></select>
+    <!-- TAB: OVERVIEW -->
+    <div class="tab-content active" id="tab-overview">
+      <div id="overview-empty" class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <p>Run a scan or select one from the history to view results</p>
+      </div>
+      <div id="overview-content" style="display:none;display:flex;flex-direction:column;gap:12px">
+
+        <!-- Score cards -->
+        <div class="score-row" id="score-row">
+          <div class="score-card">
+            <button class="sparkle-btn sc-sparkle tooltip" data-widget="overall-score" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            <div class="sc-label">Overall</div>
+            <div class="sc-value" id="sc-overall">--</div>
+            <div class="sc-grade" id="sc-grade">--</div>
+          </div>
+          <div class="score-card">
+            <button class="sparkle-btn sc-sparkle tooltip" data-widget="network-score" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            <div class="sc-label">Network</div>
+            <div class="sc-value" id="sc-network">--</div>
+            <div class="sc-grade" id="sc-net-g" style="font-size:9px;color:var(--text3)">PORT SCAN</div>
+          </div>
+          <div class="score-card">
+            <button class="sparkle-btn sc-sparkle tooltip" data-widget="tls-score" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            <div class="sc-label">TLS / SSL</div>
+            <div class="sc-value" id="sc-tls">--</div>
+            <div class="sc-grade" id="sc-tls-g" style="font-size:9px;color:var(--text3)">CERTIFICATE</div>
+          </div>
+          <div class="score-card">
+            <button class="sparkle-btn sc-sparkle tooltip" data-widget="http-score" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            <div class="sc-label">HTTP</div>
+            <div class="sc-value" id="sc-http">--</div>
+            <div class="sc-grade" id="sc-http-g" style="font-size:9px;color:var(--text3)">HEADERS</div>
+          </div>
+          <div class="score-card">
+            <button class="sparkle-btn sc-sparkle tooltip" data-widget="dns-score" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            <div class="sc-label">DNS</div>
+            <div class="sc-value" id="sc-dns">--</div>
+            <div class="sc-grade" id="sc-dns-g" style="font-size:9px;color:var(--text3)">RECORDS</div>
+          </div>
         </div>
-        <div class="compare-vs">VS</div>
-        <div>
-          <div class="card-title" style="margin-bottom:.5rem">Scan B</div>
-          <select class="cmp-select" id="cmp-b"><option value="">— Select scan —</option></select>
+
+        <!-- Radar + Donut -->
+        <div class="charts-2col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+                Security Posture
+              </div>
+              <button class="sparkle-btn tooltip" data-widget="radar-chart" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            </div>
+            <div class="card-body chart-wrap"><canvas id="radar-chart" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                Severity Distribution
+              </div>
+              <button class="sparkle-btn tooltip" data-widget="severity-chart" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            </div>
+            <div class="card-body chart-wrap"><canvas id="donut-chart" class="chart-canvas"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Bar + Benchmark -->
+        <div class="charts-2col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                Domain Scores
+              </div>
+              <button class="sparkle-btn tooltip" data-widget="domain-scores" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            </div>
+            <div class="card-body chart-wrap"><canvas id="bar-chart" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Benchmark Comparison
+              </div>
+              <button class="sparkle-btn tooltip" data-widget="benchmark" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+            </div>
+            <div class="card-body" id="benchmark-body"></div>
+          </div>
+        </div>
+
+        <!-- OWASP Heatmap -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              OWASP Finding Heatmap
+            </div>
+            <button class="sparkle-btn tooltip" data-widget="heatmap" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+          </div>
+          <div class="card-body"><canvas id="heatmap-canvas" style="width:100%;height:130px"></canvas></div>
+        </div>
+
+      </div><!-- /overview-content -->
+    </div>
+
+    <!-- TAB: FINDINGS -->
+    <div class="tab-content" id="tab-findings">
+      <div class="findings-filters" id="findings-filters">
+        <button class="sev-filter active" data-sev="all">All</button>
+        <button class="sev-filter" data-sev="critical" style="color:var(--critical);border-color:var(--critical)">Critical</button>
+        <button class="sev-filter" data-sev="high" style="color:var(--high);border-color:var(--high)">High</button>
+        <button class="sev-filter" data-sev="medium" style="color:var(--medium);border-color:var(--medium)">Medium</button>
+        <button class="sev-filter" data-sev="low" style="color:var(--low);border-color:var(--low)">Low</button>
+        <button class="sev-filter" data-sev="info" style="color:var(--info);border-color:var(--info)">Info</button>
+        <span id="findings-count" style="margin-left:auto;font-size:10px;color:var(--text3)"></span>
+      </div>
+      <div id="findings-list"></div>
+    </div>
+
+    <!-- TAB: HISTORY -->
+    <div class="tab-content" id="tab-history">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Score Trend</div>
+          <button class="sparkle-btn tooltip" data-widget="history-trend" data-tip="AI Explain"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+        </div>
+        <div class="card-body chart-wrap"><canvas id="history-chart" class="chart-canvas" style="max-height:200px"></canvas></div>
+      </div>
+      <div class="history-donuts" id="history-donuts"></div>
+    </div>
+
+    <!-- TAB: COMPARE -->
+    <div class="tab-content" id="tab-compare">
+      <div class="compare-selectors">
+        <div class="compare-select-group">
+          <label>Scan A</label>
+          <select class="sb-select" id="cmp-a"></select>
+        </div>
+        <div class="compare-select-group">
+          <label>Scan B</label>
+          <select class="sb-select" id="cmp-b"></select>
+        </div>
+        <button class="compare-btn" onclick="runCompare()">Compare</button>
+      </div>
+      <div id="compare-result" style="display:none">
+        <div class="charts-2col" style="margin-bottom:12px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Radar Overlay</div></div>
+            <div class="card-body chart-wrap"><canvas id="compare-radar" class="chart-canvas"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Score Delta</div></div>
+            <div class="card-body" id="cmp-meta"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">AI Comparative Analysis</div>
+            <button class="sparkle-btn tooltip" data-widget="compare-analysis" data-tip="Re-analyze"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg></button>
+          </div>
+          <div class="card-body compare-ai" id="cmp-ai"></div>
         </div>
       </div>
-      <div class="compare-run">
-        <button class="btn-accent" onclick="performComparison()">⚡ Compare Scans</button>
-      </div>
-      <div id="cmp-result"></div>
     </div>
 
   </main>
 </div>
 
+<!-- ── CHAT FAB ────────────────────────────────────────────────── -->
+<button id="chat-fab" onclick="toggleChat()" title="AI Assistant">
+  <div class="fab-inner">
+    <div class="fab-dot"></div>
+    <div class="fab-dot"></div>
+    <div class="fab-dot"></div>
+  </div>
+</button>
+
+<!-- ── CHAT SIDEBAR ────────────────────────────────────────────── -->
+<aside id="chat-sidebar">
+  <div class="chat-header">
+    <div class="chat-header-top">
+      <div class="chat-title">AI Security Analyst</div>
+      <button class="chat-close" onclick="toggleChat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="model-selector">
+      <button class="model-btn active" data-model="gemini-2.5-pro">2.5 Pro</button>
+      <button class="model-btn" data-model="gemini-2.5-pro">Pro</button>
+      <button class="model-btn" data-model="gemini-1.5-flash">Lite</button>
+    </div>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg assistant">Hello. I am your AI security analyst. Select a scan and I can help you understand the results, prioritize fixes, and answer security questions.</div>
+  </div>
+  <div class="chat-footer">
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" type="text" placeholder="Ask about this scan…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send" onclick="sendChat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ── SPARKLE MODAL ───────────────────────────────────────────── -->
+<div id="sparkle-overlay" onclick="if(event.target===this)closeSparkle()">
+  <div class="sparkle-modal">
+    <div class="sm-header">
+      <div class="sm-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg>
+      </div>
+      <div class="sm-title" id="sm-title">AI Explanation</div>
+      <button class="sm-close" onclick="closeSparkle()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="sm-body" id="sm-body">
+      <div class="sm-loading"><div class="sm-spinner"></div> Analyzing with AI…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROGRESS MODAL ──────────────────────────────────────────── -->
+<div id="progress-overlay">
+  <div class="progress-modal">
+    <div class="pm-radar">
+      <svg viewBox="0 0 80 80">
+        <circle fill="none" stroke="rgba(0,255,110,.15)" stroke-width="1" cx="40" cy="40" r="34"/>
+        <circle fill="none" stroke="rgba(0,255,110,.1)" stroke-width="1" cx="40" cy="40" r="22"/>
+        <circle fill="none" stroke="rgba(0,255,110,.08)" stroke-width="1" cx="40" cy="40" r="10"/>
+        <g style="transform-origin:40px 40px;animation:sweep 1.6s linear infinite">
+          <path d="M40 40 L40 6 A34 34 0 0 1 74 40 Z" fill="url(#pg)" opacity=".7"/>
+          <defs><radialGradient id="pg"><stop offset="0%" stop-color="#00ff6e" stop-opacity=".9"/><stop offset="100%" stop-color="#00ff6e" stop-opacity="0"/></radialGradient></defs>
+        </g>
+        <circle cx="40" cy="40" r="3" fill="#00ff6e"/>
+      </svg>
+    </div>
+    <div class="pm-title">Scanning…</div>
+    <div class="pm-step" id="pm-step">Initializing</div>
+    <div class="pm-bar"><div class="pm-fill" id="pm-fill"></div></div>
+    <div class="pm-pct" id="pm-pct">0%</div>
+  </div>
+</div>
+
 <script>
-// ── CANVAS BACKGROUND ─────────────────────────────────────────────
-(function () {
-  const c = document.getElementById('dash-canvas');
-  const ctx = c.getContext('2d');
-  let W, H;
-
-  function resize() {
-    W = c.width  = window.innerWidth;
-    H = c.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  const pts = Array.from({ length: 55 }, () => ({
-    x:  Math.random() * 1920,
-    y:  Math.random() * 1080,
-    vx: (Math.random() - .5) * .32,
-    vy: (Math.random() - .5) * .26,
-    r:  1.2 + Math.random() * 1.5,
-  }));
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    for (const p of pts) {
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-    }
-    for (let i = 0; i < pts.length; i++) {
-      for (let j = i + 1; j < pts.length; j++) {
-        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-        const d  = Math.sqrt(dx*dx + dy*dy);
-        if (d < 160) {
-          ctx.strokeStyle = `rgba(0,255,110,${.13*(1-d/160)})`;
-          ctx.lineWidth = .7;
-          ctx.beginPath();
-          ctx.moveTo(pts[i].x, pts[i].y);
-          ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-    for (const p of pts) {
-      ctx.fillStyle = 'rgba(0,255,110,.42)';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fill();
-    }
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-
-// ── STATE ─────────────────────────────────────────────────────────
-let currentScan = null;
-let allScans    = [];
-let allFindings = [];
-let sortCol     = 'severity';
-let sortDir     = 'asc';
-
-const OWASP_NAMES = {
-  A01:'Broken Access Control',    A02:'Cryptographic Failures',
-  A03:'Injection',                A04:'Insecure Design',
-  A05:'Security Misconfiguration',A06:'Vulnerable Components',
-  A07:'Auth Failures',            A08:'Data Integrity Failures',
-  A09:'Logging Failures',         A10:'SSRF',
+// ────────────────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────────────────
+const S = {
+  scans: [],
+  currentId: null,
+  currentScan: null,
+  chatHistory: [],
+  model: 'gemini-2.5-pro',
+  scanType: 'both',
+  sevFilter: 'all',
+  charts: {},
+  donutCharts: [],
+  pollTimer: null,
+  cmpScan1: null,
+  cmpScan2: null,
 };
 
-const SEV_ORDER = { critical:0, high:1, medium:2, low:3, info:4 };
+const BENCHMARKS = {
+  network: {avg:68, top10:92},
+  tls:     {avg:72, top10:93},
+  http:    {avg:65, top10:91},
+  dns:     {avg:70, top10:90},
+};
+const SEV_ORDER = ['critical','high','medium','low','info'];
+const SEV_COLORS = {critical:'#ff3344',high:'#ff8800',medium:'#ffc300',low:'#00ff6e',info:'#00ccff'};
 
-// ── TABS ──────────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-  });
-});
-
-// ── LOADING ───────────────────────────────────────────────────────
-function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
-function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
-
-// ── LOAD SCANS ────────────────────────────────────────────────────
-async function loadScans() {
-  try {
-    const r = await fetch('/api/scans');
-    const data = await r.json();
-    allScans = Array.isArray(data) ? data : [];
-
-    const opts = allScans.map(s =>
-      `<option value="${escapeAttr(s.scan_id)}">[${escapeHtml(s.grade||'?')}] ${escapeHtml(s.host||s.target)} – ${new Date(s.date).toLocaleDateString()}</option>`
-    ).join('');
-    const ph = '<option value="">— Select a scan —</option>';
-
-    ['scan-selector','cmp-a','cmp-b'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = ph + opts;
-    });
-
-    populateHistory();
-
-    if (allScans.length && !currentScan) {
-      const saved  = localStorage.getItem('ns_last_scan');
-      const target = (saved && allScans.find(s => s.scan_id === saved)) ? saved : allScans[0].scan_id;
-      await loadScan(target);
-      document.getElementById('scan-selector').value = target;
-    } else {
-      hideLoading();
-    }
-  } catch (e) {
-    console.error('loadScans:', e);
-    hideLoading();
+// ────────────────────────────────────────────────────────────────
+// INIT + BACKGROUND CANVAS
+// ────────────────────────────────────────────────────────────────
+(function bgCanvas() {
+  const cv = document.getElementById('bg-canvas');
+  const ctx = cv.getContext('2d');
+  let W, H, nodes = [], frame;
+  function resize() {
+    W = cv.width = innerWidth; H = cv.height = innerHeight;
+    nodes = Array.from({length:40}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3
+    }));
   }
-}
-
-async function loadScan(scanId) {
-  if (!scanId) return;
-  showLoading();
-  try {
-    const r = await fetch(`/api/scans/${encodeURIComponent(scanId)}`);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    currentScan = await r.json();
-    allFindings = currentScan.findings || [];
-    localStorage.setItem('ns_last_scan', scanId);
-    updateScanMeta();
-    renderOverview();
-    renderFindings();
-    document.getElementById('findings-count').textContent = allFindings.length;
-  } catch (e) {
-    console.error('loadScan:', e);
-  } finally {
-    hideLoading();
-  }
-}
-
-function handleScanSelect(v) { if (v) loadScan(v); }
-
-// ── META BAR ──────────────────────────────────────────────────────
-function updateScanMeta() {
-  if (!currentScan) return;
-  const d   = new Date(currentScan.started_at).toLocaleString();
-  const dur = currentScan.duration_seconds ? Math.round(currentScan.duration_seconds) + 's' : '—';
-  document.getElementById('scan-meta-text').innerHTML =
-    `Host: <span>${escapeHtml(currentScan.host || currentScan.target || '—')}</span>&nbsp; ` +
-    `Date: <span>${d}</span>&nbsp; ` +
-    `Duration: <span>${dur}</span>&nbsp; ` +
-    `<span style="font-family:monospace;font-size:.7rem;color:var(--text3)">${currentScan.scan_id.slice(0,12)}…</span>`;
-}
-
-// ── OVERVIEW ──────────────────────────────────────────────────────
-function renderOverview() {
-  if (!currentScan) return;
-  const sc  = currentScan.scores || {};
-  const su  = currentScan.summary || {};
-  const ow  = currentScan.owasp_coverage || [];
-  const bySev = su.by_severity || {};
-  const grade = sc.grade || '?';
-
-  const GC = { A:'#00ff6e', B:'#10b981', C:'#ffc300', D:'#ff8800', F:'#ff3344' };
-  const gradeCol  = GC[grade] || '#888';
-  const gradeGlow = gradeCol + '44';
-
-  const html = `
-    <div class="ov-top">
-      <div class="card grade-card" style="--grade-col:${gradeCol};--grade-glow:${gradeGlow}">
-        <span class="grade-letter">${escapeHtml(grade)}</span>
-        <span class="grade-score">${Math.round(sc.weighted_overall||0)}/100</span>
-        <span class="grade-label">Security Score</span>
-      </div>
-      <div class="sev-grid">
-        ${['critical','high','medium','low','info'].map(s => `
-          <div class="sev-card ${s}">
-            <span class="sev-num">${bySev[s]||0}</span>
-            <span class="sev-lbl">${s.charAt(0).toUpperCase()+s.slice(1)}</span>
-          </div>`).join('')}
-      </div>
-    </div>
-    <div class="domain-row">
-      ${domainCard('🌐','Network',sc.network)}
-      ${domainCard('🔐','TLS',sc.tls)}
-      ${domainCard('📡','HTTP',sc.http)}
-      ${domainCard('🌍','DNS',sc.dns)}
-    </div>
-    <div class="card owasp-section">
-      <div class="card-title">OWASP Top 10 Coverage</div>
-      <div class="owasp-items">${owaspItems(ow)}</div>
-    </div>
-  `;
-  document.getElementById('ov-content').innerHTML = html;
-
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.domain-bar-fill').forEach(el => {
-      el.style.width = el.dataset.width + '%';
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      if(n.x<0||n.x>W) n.vx=-n.vx;
+      if(n.y<0||n.y>H) n.vy=-n.vy;
     });
-  });
+    nodes.forEach((a,i) => {
+      nodes.slice(i+1).forEach(b => {
+        const d = Math.hypot(a.x-b.x,a.y-b.y);
+        if(d<130){
+          ctx.beginPath();
+          ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+          ctx.strokeStyle = `rgba(0,255,110,${.08*(1-d/130)})`;
+          ctx.lineWidth=.5; ctx.stroke();
+        }
+      });
+      ctx.beginPath();
+      ctx.arc(a.x,a.y,1.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,255,110,.25)';ctx.fill();
+    });
+    frame = requestAnimationFrame(draw);
+  }
+  resize(); draw();
+  addEventListener('resize', resize);
+})();
+
+// ────────────────────────────────────────────────────────────────
+// API
+// ────────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'},...opts});
+  if(!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error||r.statusText); }
+  return r.json();
+}
+const getScans  = ()  => api('/api/scans');
+const getScan   = id  => api(`/api/scans/${id}`);
+const startScan = body => api('/api/scan',{method:'POST',body:JSON.stringify(body)});
+const pollJob   = id  => api(`/api/jobs/${id}`);
+const explainWidget = (scan_id,widget_type,data) =>
+  api('/api/explain',{method:'POST',body:JSON.stringify({scan_id,widget_type,data,model:S.model})});
+const chatMsg = (scan_id,message,history) =>
+  api('/api/chat',{method:'POST',body:JSON.stringify({scan_id,message,history,model:S.model})});
+const compareScans = (id1,id2) =>
+  api('/api/compare',{method:'POST',body:JSON.stringify({scan_id_1:id1,scan_id_2:id2,model:S.model})});
+
+// ────────────────────────────────────────────────────────────────
+// LOADING
+// ────────────────────────────────────────────────────────────────
+function setLdStatus(t){ document.getElementById('ld-status').textContent=t; }
+function hideLoading(){
+  const el=document.getElementById('loading');
+  el.classList.add('fade');
+  setTimeout(()=>{el.style.display='none'; document.getElementById('app').style.display='flex';},500);
 }
 
-function scoreColor(s) {
-  if (s >= 90) return '#00ff6e';
-  if (s >= 75) return '#10b981';
-  if (s >= 60) return '#ffc300';
-  if (s >= 45) return '#ff8800';
-  return '#ff3344';
-}
+// ────────────────────────────────────────────────────────────────
+// SCAN LIST
+// ────────────────────────────────────────────────────────────────
+function gradeClass(g){ return `grade-${g||'F'}`; }
 
-function domainCard(icon, name, score) {
-  const s = Math.round(score ?? 0);
-  const col = scoreColor(s);
-  return `
-    <div class="card domain-card">
-      <div class="domain-head">
-        <span class="domain-icon">${icon}</span>
-        <span class="domain-score" style="color:${col}">${s}</span>
+function renderScanList(scans) {
+  const el = document.getElementById('scan-list');
+  if(!scans.length){el.innerHTML='<div style="font-size:10px;color:var(--text3);padding:4px 0">No scans yet. Run your first scan.</div>';return;}
+  el.innerHTML = scans.map(s => {
+    const target = (s.target||s.host||'Unknown').replace(/^https?:\/\//,'').slice(0,28);
+    const grade  = s.grade||'--';
+    const date   = (s.date||'').slice(0,10);
+    return `<div class="scan-item${S.currentId===s.scan_id?' active':''}" onclick="loadScan('${s.scan_id}')">
+      <div class="si-top">
+        <div class="si-target">${target}</div>
+        <div class="si-grade ${gradeClass(grade)}">${grade}</div>
       </div>
-      <div class="domain-name">${name}</div>
-      <div class="domain-bar-track">
-        <div class="domain-bar-fill" data-width="${s}" style="width:0%;background:linear-gradient(90deg,${col}88,${col})"></div>
-      </div>
+      <div class="si-meta">${date} · ${s.total_findings||0} findings</div>
     </div>`;
-}
-
-function owaspItems(coverage) {
-  const map = {};
-  coverage.forEach(c => { map[c.owasp_id] = c; });
-  return ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'].map(id => {
-    const c   = map[id];
-    const cls = c ? (c.status === 'pass' ? 'pass' : 'fail') : 'neutral';
-    const st  = c ? (c.status === 'pass' ? '✓ Pass' : `✗ ${c.finding_count||0} finding${(c.finding_count||0)!==1?'s':''}`) : '— N/A';
-    return `
-      <div class="ow-item ${cls}">
-        <div class="ow-id">${id}</div>
-        <div class="ow-name">${OWASP_NAMES[id]||id}</div>
-        <div class="ow-status">${st}</div>
-      </div>`;
   }).join('');
 }
 
-// ── FINDINGS ─────────────────────────────────────────────────────
-function renderFindings() {
-  const el = document.getElementById('findings-content');
-  if (!currentScan) {
-    el.innerHTML = '<div class="empty-state"><span class="es-icon">🔍</span><div class="es-title">No scan selected</div></div>';
-    return;
-  }
-  const domains    = [...new Set(allFindings.map(f => f.domain))].sort();
-  const severities = ['critical','high','medium','low','info'];
+// ────────────────────────────────────────────────────────────────
+// LOAD SCAN
+// ────────────────────────────────────────────────────────────────
+async function loadScan(id) {
+  if(S.currentId===id) return;
+  S.currentId=id; S.currentScan=null;
+  try {
+    const scan = await getScan(id);
+    S.currentScan = scan;
+    renderScan(scan);
+    renderScanList(S.scans);
+  } catch(e) { alert('Failed to load scan: '+e.message); }
+}
 
-  el.innerHTML = `
-    <div class="filter-bar">
-      <select class="filter-select" id="flt-sev" onchange="applyFilters()">
-        <option value="">All Severities</option>
-        ${severities.map(s => `<option value="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
-      </select>
-      <select class="filter-select" id="flt-dom" onchange="applyFilters()">
-        <option value="">All Domains</option>
-        ${domains.map(d => `<option value="${d}">${d}</option>`).join('')}
-      </select>
-      <input class="filter-input" id="flt-q" type="text" placeholder="Search findings…" oninput="applyFilters()">
-      <span class="findings-count" id="findings-shown">${allFindings.length} findings</span>
-    </div>
-    <div class="table-wrap">
-      <table class="findings" id="findings-table">
-        <thead>
-          <tr>
-            <th data-col="severity">Severity <span class="sort-icon"></span></th>
-            <th data-col="domain">Domain <span class="sort-icon"></span></th>
-            <th data-col="title">Finding <span class="sort-icon"></span></th>
-            <th data-col="cvss_score">CVSS <span class="sort-icon"></span></th>
-            <th data-col="owasp_id">OWASP <span class="sort-icon"></span></th>
-          </tr>
-        </thead>
-        <tbody id="findings-tbody"></tbody>
-      </table>
+function renderScan(scan) {
+  const scores  = scan.scores || {};
+  const summary = scan.summary || {};
+  const bySev   = summary.by_severity || {};
+  const target  = scan.target || scan.host || 'Unknown';
+  const date    = (scan.completed_at||'').slice(0,10);
+  const overall = Math.round(scores.weighted_overall||0);
+  const grade   = scores.grade||'--';
+
+  // Top bar
+  document.getElementById('tb-title').textContent = target.replace(/^https?:\/\//,'').slice(0,60);
+  document.getElementById('tb-meta').textContent =
+    `${date} · ${(scan.duration_seconds||0).toFixed(1)}s · ${summary.total_findings||0} findings`;
+  document.getElementById('pdf-btn').style.display='flex';
+  document.getElementById('ai-btn').style.display='flex';
+
+  // Score cards
+  document.getElementById('sc-overall').textContent = overall;
+  document.getElementById('sc-grade').textContent = grade;
+  document.getElementById('sc-grade').className = 'sc-grade '+gradeClass(grade);
+  document.getElementById('sc-network').textContent = scores.network??'--';
+  document.getElementById('sc-tls').textContent     = scores.tls??'--';
+  document.getElementById('sc-http').textContent    = scores.http??'--';
+  document.getElementById('sc-dns').textContent     = scores.dns??'--';
+
+  document.getElementById('overview-empty').style.display='none';
+  document.getElementById('overview-content').style.display='flex';
+
+  // Charts
+  initRadarChart(scores);
+  initDonutChart(bySev);
+  initBarChart(scores);
+  renderBenchmark(scores);
+  renderHeatmap(scan);
+
+  // Findings
+  renderFindings(scan.findings||[]);
+
+  // History compare selects
+  populateCompareSelects();
+}
+
+// ────────────────────────────────────────────────────────────────
+// CHART UTILITIES
+// ────────────────────────────────────────────────────────────────
+const chartFont = { family:"'Poppins',sans-serif", size:10 };
+const gridColor = 'rgba(0,255,110,.1)';
+const textColor = '#5ea87a';
+
+function destroyChart(id){
+  if(S.charts[id]){S.charts[id].destroy();delete S.charts[id];}
+}
+
+function initRadarChart(scores) {
+  destroyChart('radar');
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+  S.charts.radar = new Chart(ctx, {
+    type:'radar',
+    data:{
+      labels:['Network','TLS','HTTP','DNS'],
+      datasets:[
+        {label:'This Scan',
+         data:[scores.network||0,scores.tls||0,scores.http||0,scores.dns||0],
+         borderColor:'#00ff6e',backgroundColor:'rgba(0,255,110,.12)',borderWidth:2,pointBackgroundColor:'#00ff6e',pointRadius:4},
+        {label:'Industry Avg',
+         data:[68,72,65,70],
+         borderColor:'rgba(255,255,255,.2)',backgroundColor:'rgba(255,255,255,.03)',borderWidth:1,
+         borderDash:[5,5],pointRadius:2,pointBackgroundColor:'rgba(255,255,255,.3)'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      scales:{r:{min:0,max:100,ticks:{stepSize:20,color:textColor,backdropColor:'transparent',font:chartFont},
+                  grid:{color:gridColor},
+                  pointLabels:{color:textColor,font:{family:"'Poppins',sans-serif",size:10.5}}}},
+      plugins:{legend:{labels:{color:textColor,font:chartFont,boxWidth:10}}}
+    }
+  });
+}
+
+function initDonutChart(bySev) {
+  destroyChart('donut');
+  const labels=[], vals=[], colors=[];
+  SEV_ORDER.forEach(s=>{const v=bySev[s]||0;if(v){labels.push(s.toUpperCase());vals.push(v);colors.push(SEV_COLORS[s]);}});
+  if(!vals.length){labels.push('NONE');vals.push(1);colors.push('#1a3a2a');}
+  const ctx = document.getElementById('donut-chart').getContext('2d');
+  S.charts.donut = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:'#010804',borderWidth:2,hoverBorderWidth:0}]},
+    options:{
+      responsive:true,cutout:'68%',
+      plugins:{
+        legend:{position:'right',labels:{color:textColor,font:chartFont,boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`}}
+      }
+    }
+  });
+}
+
+function initBarChart(scores) {
+  destroyChart('bar');
+  const ctx = document.getElementById('bar-chart').getContext('2d');
+  S.charts.bar = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['Network','TLS','HTTP','DNS'],
+      datasets:[
+        {label:'Score',data:[scores.network||0,scores.tls||0,scores.http||0,scores.dns||0],
+         backgroundColor:['#00ff6e','#10b981','#059669','#047857'],borderRadius:6,borderSkipped:false},
+        {label:'Benchmark',data:[68,72,65,70],
+         backgroundColor:'rgba(255,255,255,.08)',borderRadius:6,borderSkipped:false},
+      ]
+    },
+    options:{
+      responsive:true,indexAxis:'y',
+      scales:{
+        x:{min:0,max:100,grid:{color:gridColor},ticks:{color:textColor,font:chartFont},border:{display:false}},
+        y:{grid:{display:false},ticks:{color:textColor,font:chartFont},border:{display:false}}
+      },
+      plugins:{legend:{labels:{color:textColor,font:chartFont,boxWidth:10}}}
+    }
+  });
+}
+
+function renderBenchmark(scores) {
+  const domains = [{k:'network',l:'Network'},{k:'tls',l:'TLS'},{k:'http',l:'HTTP'},{k:'dns',l:'DNS'}];
+  const el = document.getElementById('benchmark-body');
+  el.innerHTML = domains.map(({k,l})=>{
+    const val = scores[k]||0;
+    const avg = BENCHMARKS[k].avg;
+    const top = BENCHMARKS[k].top10;
+    const diff = val - avg;
+    const avgPct = (avg/100*100).toFixed(0);
+    const col = val>=top?'var(--low)':val>=avg?'var(--accent2)':'var(--high)';
+    const dStr = diff>=0?`+${diff}`:diff;
+    const dCol = diff>=0?'var(--low)':'var(--critical)';
+    return `<div class="bench-row">
+      <div class="bench-label">${l}</div>
+      <div class="bench-bar-wrap">
+        <div class="bench-bar-track">
+          <div class="bench-bar-fill" style="width:${val}%;background:${col}"></div>
+        </div>
+        <div class="bench-bar-avg" style="left:${avgPct}%" title="Industry avg ${avg}"></div>
+      </div>
+      <div class="bench-val">${val}</div>
+      <div class="bench-diff" style="color:${dCol}">${dStr}</div>
     </div>`;
-
-  setupTableSort();
+  }).join('');
 }
 
-function applyFilters() {
-  const sev = (document.getElementById('flt-sev')?.value||'').toLowerCase();
-  const dom = (document.getElementById('flt-dom')?.value||'').toLowerCase();
-  const q   = (document.getElementById('flt-q')?.value  ||'').toLowerCase();
+function renderHeatmap(scan) {
+  const cv = document.getElementById('heatmap-canvas');
+  const ctx = cv.getContext('2d');
+  const dpr = devicePixelRatio||1;
+  const W = cv.offsetWidth, H = 130;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.scale(dpr,dpr);
 
-  let filtered = allFindings.filter(f => {
-    if (sev && (f.severity||'').toLowerCase() !== sev) return false;
-    if (dom && (f.domain||'').toLowerCase() !== dom) return false;
-    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return false;
-    return true;
+  const owaspIds = ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'];
+  const sevs = ['critical','high','medium','low','info'];
+  const counts = {};
+  owaspIds.forEach(o=>{ counts[o]={}; sevs.forEach(s=>counts[o][s]=0); });
+
+  (scan.findings||[]).forEach(f=>{
+    if(!f||typeof f!=='object') return;
+    const oid = (f.owasp_id||'A05').replace(/[^A-Z0-9]/g,'').slice(0,3);
+    const sev = (f.severity||'info').toLowerCase();
+    if(counts[oid]&&sevs.includes(sev)) counts[oid][sev]++;
   });
 
-  filtered = sortFindings(filtered);
-  renderFindingsRows(filtered);
+  const padL=36, padT=16, padB=20;
+  const cellW = (W-padL)/owaspIds.length;
+  const cellH = (H-padT-padB)/sevs.length;
+  const maxCount = Math.max(1,...owaspIds.flatMap(o=>sevs.map(s=>counts[o][s])));
 
-  const el = document.getElementById('findings-shown');
-  if (el) el.textContent = `${filtered.length} finding${filtered.length!==1?'s':''}`;
-}
-
-function sortFindings(list) {
-  return [...list].sort((a, b) => {
-    let av = a[sortCol], bv = b[sortCol];
-    if (sortCol === 'severity') { av = SEV_ORDER[av]??99; bv = SEV_ORDER[bv]??99; }
-    if (av < bv) return sortDir === 'asc' ? -1 :  1;
-    if (av > bv) return sortDir === 'asc' ?  1 : -1;
-    return 0;
+  // Axis labels
+  ctx.font = "9px 'Poppins',sans-serif";
+  ctx.fillStyle='#3d7057';
+  sevs.forEach((s,si)=>{
+    ctx.fillText(s.slice(0,4).toUpperCase(), 0, padT+si*cellH+cellH*.6);
   });
-}
+  owaspIds.forEach((o,oi)=>{
+    ctx.fillText(o, padL+oi*cellW+cellW*.2, H-4);
+  });
 
-function renderFindingsRows(list) {
-  const tbody = document.getElementById('findings-tbody');
-  if (!tbody) return;
-
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="padding:2.5rem"><span class="es-icon">🔍</span><div class="es-title">No findings match filters</div></div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = list.map(f => `
-    <tr onclick="openDrawer('${escapeAttr(f.id)}')">
-      <td><span class="sev-badge ${(f.severity||'').toLowerCase()}">${escapeHtml(f.severity||'?')}</span></td>
-      <td><span class="domain-badge">${escapeHtml(f.domain||'?')}</span></td>
-      <td><div class="finding-title" title="${escapeAttr(f.title||'')}">${escapeHtml(f.title||'Untitled')}</div></td>
-      <td><span class="cvss-score" style="color:${cvssColor(f.cvss_score)}">${(f.cvss_score||0).toFixed(1)}</span></td>
-      <td><span class="owasp-tag">${escapeHtml(f.owasp_id||'—')}</span></td>
-    </tr>`).join('');
-}
-
-function setupTableSort() {
-  document.querySelectorAll('#findings-table th[data-col]').forEach(th => {
-    th.addEventListener('click', () => {
-      const col = th.dataset.col;
-      if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-      else { sortCol = col; sortDir = 'asc'; }
-      document.querySelectorAll('#findings-table th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
-      th.classList.add('sort-' + sortDir);
-      applyFilters();
+  owaspIds.forEach((o,oi)=>{
+    sevs.forEach((s,si)=>{
+      const cnt = counts[o][s];
+      const intensity = cnt/maxCount;
+      const col = SEV_COLORS[s]||'#00ff6e';
+      const alpha = cnt===0? 0.04 : 0.15+intensity*.85;
+      ctx.fillStyle = hexToRgba(col, alpha);
+      const x=padL+oi*cellW, y=padT+si*cellH;
+      ctx.beginPath();
+      ctx.roundRect(x+1,y+1,cellW-2,cellH-2,3);
+      ctx.fill();
+      if(cnt>0){
+        ctx.fillStyle='rgba(255,255,255,.7)';
+        ctx.font=`${Math.min(10,cellH*.5)}px 'Poppins',sans-serif`;
+        ctx.fillText(cnt, x+cellW/2-3, y+cellH/2+4);
+      }
     });
   });
-  const dth = document.querySelector('#findings-table th[data-col="severity"]');
-  if (dth) { dth.classList.add('sort-asc'); }
-  applyFilters();
 }
 
-function cvssColor(score) {
-  const s = parseFloat(score)||0;
-  if (s >= 9) return 'var(--critical)';
-  if (s >= 7) return 'var(--high)';
-  if (s >= 4) return 'var(--medium)';
-  if (s >  0) return 'var(--low)';
-  return 'var(--text3)';
+function hexToRgba(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
-// ── DRAWER ────────────────────────────────────────────────────────
-function openDrawer(findingId) {
-  const f = allFindings.find(x => x.id === findingId);
-  if (!f) return;
+// ────────────────────────────────────────────────────────────────
+// FINDINGS
+// ────────────────────────────────────────────────────────────────
+function renderFindings(findings) {
+  const sorted = [...findings].filter(f=>f&&typeof f==='object').sort((a,b)=>{
+    const ai=SEV_ORDER.indexOf(a.severity?.toLowerCase()||'info');
+    const bi=SEV_ORDER.indexOf(b.severity?.toLowerCase()||'info');
+    return (ai<0?99:ai)-(bi<0?99:bi);
+  });
+  S._findings = sorted;
+  filterFindings();
+}
 
-  document.getElementById('drawer-title').textContent = f.title || 'Finding Details';
-  document.getElementById('drawer-badges').innerHTML = `
-    <span class="sev-badge ${(f.severity||'').toLowerCase()}">${escapeHtml(f.severity||'?')}</span>
-    <span class="domain-badge">${escapeHtml(f.domain||'?')}</span>
-    <span class="owasp-tag">${escapeHtml(f.owasp_id||'?')}: ${escapeHtml(OWASP_NAMES[f.owasp_id]||'')}</span>
-  `;
-
-  const parts = [];
-  const cvss = f.cvss_score || 0;
-  const bd   = f.cvss_breakdown || {};
-
-  parts.push(`
-    <div>
-      <div class="d-section-title">CVSS 3.1 Score</div>
-      <div class="cvss-box">
-        <div class="cvss-score-main">
-          <span class="cvss-big" style="color:${cvssColor(cvss)}">${cvss.toFixed(1)}</span>
-          <div>
-            <div style="font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:.3rem">${escapeHtml((f.severity||'').toUpperCase())}</div>
-            <div class="cvss-vector-text">${escapeHtml(f.cvss_vector||'—')}</div>
-          </div>
-        </div>
-        <div class="cvss-breakdown-grid">
-          ${Object.entries(bd).map(([k,v]) => `
-            <div class="cvss-metric">
-              <div class="cvss-metric-name">${escapeHtml(k)}</div>
-              <div class="cvss-metric-val">${escapeHtml(String(v))}</div>
-            </div>`).join('')}
-        </div>
+function filterFindings() {
+  const f = S.sevFilter;
+  const list = f==='all'? S._findings||[] : (S._findings||[]).filter(x=>(x.severity||'info').toLowerCase()===f);
+  const el = document.getElementById('findings-list');
+  document.getElementById('findings-count').textContent = `${list.length} shown`;
+  if(!list.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">No findings for this filter.</div>';return;}
+  el.innerHTML = list.map((f,i)=>{
+    const sev=(f.severity||'info').toLowerCase();
+    const cvss=f.cvss_score?`<span class="fi-cvss">CVSS ${f.cvss_score}</span>`:'';
+    const owasp=f.owasp_id?`<span class="fi-tag">${f.owasp_id}</span>`:'';
+    const domain=f.domain?`<span class="fi-tag">${f.domain}</span>`:'';
+    return `<div class="finding-item" onclick="this.classList.toggle('expanded')">
+      <div class="fi-header">
+        <span class="sev-badge sev-${sev}">${sev}</span>
+        <div class="fi-title">${f.title||'Unknown Finding'}</div>
+        ${cvss}
       </div>
-    </div>`);
-
-  const ev = f.evidence || {};
-  const evLines = [];
-  if (ev.banner)      evLines.push('Banner: ' + ev.banner);
-  if (ev.request)     evLines.push('Request:\n' + ev.request);
-  if (ev.response)    evLines.push('Response:\n' + ev.response);
-  if (ev.certificate) evLines.push('Certificate:\n' + JSON.stringify(ev.certificate, null, 2));
-  if (ev.dns_record)  evLines.push('DNS: ' + ev.dns_record);
-  if (ev.raw)         evLines.push(ev.raw);
-
-  if (evLines.length) {
-    parts.push(`
-      <div>
-        <div class="d-section-title">Evidence</div>
-        <div class="evidence-box">${escapeHtml(evLines.join('\n\n'))}</div>
-      </div>`);
-  }
-
-  if (f.remediation) {
-    parts.push(`
-      <div>
-        <div class="d-section-title">Remediation</div>
-        <div class="remediation-box">${escapeHtml(f.remediation)}</div>
-      </div>`);
-  }
-
-  document.getElementById('drawer-body').innerHTML = parts.join('');
-  document.getElementById('finding-drawer').classList.add('open');
-  document.getElementById('drawer-overlay').classList.add('open');
-}
-
-function closeDrawer() {
-  document.getElementById('finding-drawer').classList.remove('open');
-  document.getElementById('drawer-overlay').classList.remove('open');
-}
-
-// ── HISTORY ───────────────────────────────────────────────────────
-function populateHistory() {
-  const el = document.getElementById('history-list');
-  if (!allScans.length) {
-    el.innerHTML = `<div class="empty-state"><span class="es-icon">📂</span><div class="es-title">No scans yet</div><p>Run a scan to see results here.</p></div>`;
-    return;
-  }
-  el.innerHTML = allScans.map(s => `
-    <div class="hist-card" onclick="loadScanFromHistory('${escapeAttr(s.scan_id)}')">
-      <div class="hist-grade" data-grade="${escapeAttr(s.grade||'?')}">${escapeHtml(s.grade||'?')}</div>
-      <div class="hist-info">
-        <div class="hist-host">${escapeHtml(s.host||s.target||'Unknown')}</div>
-        <div class="hist-meta">
-          <span>Date: <span>${new Date(s.date).toLocaleString()}</span></span>
-          <span style="font-family:monospace;font-size:.7rem;color:var(--text3)">${s.scan_id.slice(0,10)}…</span>
-        </div>
+      <div class="fi-meta">${domain}${owasp}${f.owasp_category?`<span class="fi-tag">${f.owasp_category}</span>`:''}</div>
+      <div class="fi-desc">
+        <div style="margin-bottom:6px">${f.description||''}</div>
+        ${f.remediation?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--gb2);color:var(--accent2);font-size:10px"><b>Remediation:</b> ${f.remediation}</div>`:''}
       </div>
-      <div class="hist-findings">
-        <div class="num">${s.total_findings||0}</div>
-        <div class="lbl">findings</div>
-      </div>
-    </div>`).join('');
-}
-
-function loadScanFromHistory(scanId) {
-  loadScan(scanId);
-  document.getElementById('scan-selector').value = scanId;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('.tab-btn[data-tab="overview"]').classList.add('active');
-  document.getElementById('tab-overview').classList.add('active');
-}
-
-// ── COMPARE ───────────────────────────────────────────────────────
-async function performComparison() {
-  const idA = document.getElementById('cmp-a').value;
-  const idB = document.getElementById('cmp-b').value;
-  if (!idA || !idB)    { alert('Please select two scans to compare.'); return; }
-  if (idA === idB)     { alert('Please select two different scans.'); return; }
-
-  showLoading();
-  try {
-    const [rA, rB] = await Promise.all([
-      fetch(`/api/scans/${encodeURIComponent(idA)}`).then(r => r.json()),
-      fetch(`/api/scans/${encodeURIComponent(idB)}`).then(r => r.json()),
-    ]);
-    renderComparison(rA, rB);
-  } catch (e) {
-    document.getElementById('cmp-result').innerHTML = '<p style="color:var(--critical);padding:1rem">Failed to load scans.</p>';
-  } finally {
-    hideLoading();
-  }
-}
-
-function renderComparison(a, b) {
-  const sa = a.scores||{}, sb = b.scores||{};
-  const bsa = (a.summary||{}).by_severity||{};
-  const bsb = (b.summary||{}).by_severity||{};
-
-  function scoreRow(la, la2, vA, vB) {
-    const d = Math.round(vB - vA);
-    const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'neu';
-    return `<div class="cmp-row"><span class="lbl">${la}</span><div style="display:flex;gap:.6rem;align-items:center">
-      <span class="val">${Math.round(vA)}</span>
-      <span class="delta ${cls}">${d>0?'+':''}${d}</span>
-      <span class="val">${Math.round(vB)}</span></div></div>`;
-  }
-
-  function sevRow(key, label) {
-    const vA = bsa[key]||0, vB = bsb[key]||0;
-    const d = vB - vA;
-    const isBad = key === 'critical' || key === 'high' || key === 'medium';
-    const cls = d === 0 ? 'neu' : isBad ? (d > 0 ? 'neg' : 'pos') : (d > 0 ? 'pos' : 'neg');
-    return `<div class="cmp-row"><span class="lbl">${label}</span><div style="display:flex;gap:.6rem;align-items:center">
-      <span class="val" style="color:var(--${key})">${vA}</span>
-      <span class="delta ${cls}">${d>0?'+':''}${d}</span>
-      <span class="val" style="color:var(--${key})">${vB}</span></div></div>`;
-  }
-
-  document.getElementById('cmp-result').innerHTML = `
-    <div class="cmp-result">
-      <div class="cmp-col">
-        <div class="cmp-col-title">Score Comparison (A → B)</div>
-        <div style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem">${escapeHtml(a.host||a.target||'?')} vs ${escapeHtml(b.host||b.target||'?')}</div>
-        ${scoreRow('Overall', '', sa.weighted_overall||0, sb.weighted_overall||0)}
-        ${scoreRow('Network', '', sa.network||0, sb.network||0)}
-        ${scoreRow('TLS', '',     sa.tls||0, sb.tls||0)}
-        ${scoreRow('HTTP', '',    sa.http||0, sb.http||0)}
-        ${scoreRow('DNS', '',     sa.dns||0, sb.dns||0)}
-      </div>
-      <div class="cmp-col">
-        <div class="cmp-col-title">Findings Comparison (A → B)</div>
-        <div style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem">${new Date(a.started_at).toLocaleString()} vs ${new Date(b.started_at).toLocaleString()}</div>
-        ${sevRow('critical','Critical')}
-        ${sevRow('high','High')}
-        ${sevRow('medium','Medium')}
-        ${sevRow('low','Low')}
-        ${sevRow('info','Info')}
-      </div>
+      <button class="sparkle-btn fi-sparkle tooltip" data-widget="finding" data-finding-idx="${i}" data-tip="AI Explain" onclick="event.stopPropagation();explainFinding(${i})">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2zM5 14l.6 1.8 1.8.6-1.8.6L5 18.8l-.6-1.8L2.6 16.4l1.8-.6L5 14zM19 12l.6 1.8 1.8.6-1.8.6L19 16.8l-.6-1.8-1.8-.6 1.8-.6L19 12z"/></svg>
+      </button>
     </div>`;
+  }).join('');
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────
-function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// ────────────────────────────────────────────────────────────────
+// HISTORY TAB
+// ────────────────────────────────────────────────────────────────
+function renderHistory(scans) {
+  if(!scans.length) return;
+  const sorted = [...scans].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const dates   = sorted.map(s=>(s.date||'').slice(0,10));
+  const overall = sorted.map(s=>s.grade?{'A':100,'B':85,'C':70,'D':55,'F':40}[s.grade]||70:70);
+
+  // Line chart
+  destroyChart('history');
+  const ctx = document.getElementById('history-chart').getContext('2d');
+  S.charts.history = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:dates,
+      datasets:[{
+        label:'Security Score',data:overall,
+        borderColor:'#00ff6e',backgroundColor:'rgba(0,255,110,.08)',
+        tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#00ff6e',borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        x:{grid:{color:gridColor},ticks:{color:textColor,font:chartFont},border:{display:false}},
+        y:{min:0,max:100,grid:{color:gridColor},ticks:{color:textColor,font:chartFont},border:{display:false}}
+      },
+      plugins:{legend:{display:false}}
+    }
+  });
+
+  // Donut cards
+  S.donutCharts.forEach(c=>c.destroy());
+  S.donutCharts=[];
+  const dEl = document.getElementById('history-donuts');
+  dEl.innerHTML = sorted.slice(-12).reverse().map((s,i)=>`
+    <div class="hd-card">
+      <div class="hd-canvas-wrap">
+        <canvas id="hdc-${i}" width="70" height="70"></canvas>
+        <div class="hd-center">
+          <div class="hd-grade grade-${s.grade||'F'}">${s.grade||'?'}</div>
+          <div class="hd-score">${s.total_findings||0}F</div>
+        </div>
+      </div>
+      <div class="hd-date">${(s.date||'').slice(0,10)}</div>
+      <div class="hd-target" title="${s.target||s.host||''}">${(s.target||s.host||'N/A').replace(/^https?:\/\//,'').slice(0,14)}</div>
+    </div>`).join('');
+
+  sorted.slice(-12).reverse().forEach((s,i)=>{
+    const gc = ['A','B'].includes(s.grade)?'#00ff6e':['C'].includes(s.grade)?'#ffc300':'#ff3344';
+    const val = {'A':100,'B':85,'C':70,'D':55,'F':40}[s.grade]||70;
+    const c = new Chart(document.getElementById(`hdc-${i}`),{
+      type:'doughnut',
+      data:{datasets:[
+        {data:[val,100-val],backgroundColor:[gc,'rgba(0,0,0,.15)'],borderWidth:0,circumference:360,rotation:270}
+      ]},
+      options:{cutout:'78%',plugins:{legend:{display:false},tooltip:{enabled:false}},events:[]}
+    });
+    S.donutCharts.push(c);
+  });
 }
 
-function escapeAttr(s) { return escapeHtml(s); }
+// ────────────────────────────────────────────────────────────────
+// COMPARE TAB
+// ────────────────────────────────────────────────────────────────
+function populateCompareSelects() {
+  const scans = S.scans;
+  const opts = scans.map(s=>`<option value="${s.scan_id}">${(s.target||s.host||'Unknown').slice(0,30)} (${(s.date||'').slice(0,10)})</option>`).join('');
+  document.getElementById('cmp-a').innerHTML = opts;
+  document.getElementById('cmp-b').innerHTML = opts;
+  if(scans.length>1) document.getElementById('cmp-b').selectedIndex=1;
+}
 
-// ── INIT ──────────────────────────────────────────────────────────
-loadScans();
+async function runCompare() {
+  const id1 = document.getElementById('cmp-a').value;
+  const id2 = document.getElementById('cmp-b').value;
+  if(id1===id2){alert('Select two different scans.');return;}
+
+  const [s1,s2] = await Promise.all([getScan(id1),getScan(id2)]);
+  S.cmpScan1=s1; S.cmpScan2=s2;
+
+  document.getElementById('compare-result').style.display='block';
+
+  // Radar overlay
+  destroyChart('cmpRadar');
+  const ctx=document.getElementById('compare-radar').getContext('2d');
+  const sc1=s1.scores||{}, sc2=s2.scores||{};
+  S.charts.cmpRadar=new Chart(ctx,{
+    type:'radar',
+    data:{
+      labels:['Network','TLS','HTTP','DNS'],
+      datasets:[
+        {label:'Scan A',data:[sc1.network||0,sc1.tls||0,sc1.http||0,sc1.dns||0],
+         borderColor:'#00ff6e',backgroundColor:'rgba(0,255,110,.1)',borderWidth:2,pointRadius:3},
+        {label:'Scan B',data:[sc2.network||0,sc2.tls||0,sc2.http||0,sc2.dns||0],
+         borderColor:'#00ccff',backgroundColor:'rgba(0,204,255,.08)',borderWidth:2,pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{r:{min:0,max:100,ticks:{stepSize:20,color:textColor,backdropColor:'transparent',font:chartFont},
+                  grid:{color:gridColor},pointLabels:{color:textColor,font:{family:"'Poppins',sans-serif",size:10}}}},
+      plugins:{legend:{labels:{color:textColor,font:chartFont,boxWidth:10}}}
+    }
+  });
+
+  // Meta deltas
+  const meta=[
+    ['Overall',Math.round(sc1.weighted_overall||0),Math.round(sc2.weighted_overall||0)],
+    ['Network',sc1.network||0,sc2.network||0],
+    ['TLS',sc1.tls||0,sc2.tls||0],
+    ['HTTP',sc1.http||0,sc2.http||0],
+    ['DNS',sc1.dns||0,sc2.dns||0],
+    ['Findings',(s1.summary?.total_findings||0),(s2.summary?.total_findings||0)],
+  ];
+  document.getElementById('cmp-meta').innerHTML=meta.map(([l,v1,v2])=>{
+    const diff=v2-v1;
+    const cls=diff>0?'delta-pos':diff<0?'delta-neg':'';
+    return `<div class="compare-stat">
+      <span class="cs-label">${l}</span>
+      <span class="cs-val">${v1} → ${v2} <span class="${cls}">(${diff>=0?'+':''}${diff})</span></span>
+    </div>`;
+  }).join('');
+
+  // AI analysis
+  document.getElementById('cmp-ai').innerHTML='<div class="sm-loading"><div class="sm-spinner"></div> Generating AI comparison…</div>';
+  try {
+    const {analysis}=await compareScans(id1,id2);
+    document.getElementById('cmp-ai').innerHTML=formatAiText(analysis);
+  } catch(e) {
+    document.getElementById('cmp-ai').textContent='AI comparison unavailable. Check your GEMINI_API_KEY.';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// SCAN RUNNER (from UI)
+// ────────────────────────────────────────────────────────────────
+async function runScan() {
+  const target = document.getElementById('scan-target').value.trim();
+  const host   = document.getElementById('scan-host').value.trim();
+  if(!target && !host){alert('Enter a target path/URL or host.');return;}
+
+  showProgress('Queuing scan…', 0);
+  try {
+    const {job_id} = await startScan({target:target||undefined, host:host||undefined, type:S.scanType});
+    S.pollTimer = setInterval(()=>pollScanJob(job_id), 2000);
+  } catch(e) {
+    hideProgress();
+    alert('Scan failed to start: '+e.message);
+  }
+}
+
+async function pollScanJob(job_id) {
+  try {
+    const job = await pollJob(job_id);
+    showProgress(job.step||'Running…', job.progress||0);
+    if(job.status==='complete'){
+      clearInterval(S.pollTimer);
+      hideProgress();
+      const scans = await getScans();
+      S.scans=scans;
+      renderScanList(scans);
+      renderHistory(scans);
+      populateCompareSelects();
+      await loadScan(job.scan_id);
+    } else if(job.status==='error'){
+      clearInterval(S.pollTimer);
+      hideProgress();
+      alert('Scan error: '+(job.error||'Unknown error'));
+    }
+  } catch(e) { /* poll errors are transient — ignore */ }
+}
+
+function showProgress(step, pct) {
+  const el = document.getElementById('progress-overlay');
+  el.style.display='flex';
+  document.getElementById('pm-step').textContent=step;
+  document.getElementById('pm-fill').style.width=pct+'%';
+  document.getElementById('pm-pct').textContent=pct+'%';
+}
+function hideProgress(){document.getElementById('progress-overlay').style.display='none';}
+
+// ────────────────────────────────────────────────────────────────
+// SPARKLE / AI EXPLAIN
+// ────────────────────────────────────────────────────────────────
+function getWidgetData(widget) {
+  const scan = S.currentScan||{};
+  const scores = scan.scores||{};
+  const summary = scan.summary||{};
+  const maps = {
+    'overall-score': {score:scores.weighted_overall,grade:scores.grade},
+    'network-score': {score:scores.network,findings:(summary.by_severity||{})},
+    'tls-score':     {score:scores.tls},
+    'http-score':    {score:scores.http},
+    'dns-score':     {score:scores.dns},
+    'radar-chart':   {scores},
+    'severity-chart':{by_severity:summary.by_severity},
+    'domain-scores': {scores},
+    'benchmark':     {scores, benchmarks:BENCHMARKS},
+    'heatmap':       {owasp_coverage:scan.owasp_coverage||[],findings_count:summary.total_findings},
+    'history-trend': {scans_analyzed:S.scans.length},
+  };
+  return maps[widget]||{widget};
+}
+
+async function openSparkle(widgetType, titleText) {
+  document.getElementById('sm-title').textContent = titleText||widgetType;
+  document.getElementById('sm-body').innerHTML='<div class="sm-loading"><div class="sm-spinner"></div> Analyzing with AI…</div>';
+  document.getElementById('sparkle-overlay').classList.add('open');
+  try {
+    const {explanation} = await explainWidget(S.currentId||'',widgetType,getWidgetData(widgetType));
+    document.getElementById('sm-body').innerHTML = formatAiText(explanation);
+  } catch(e) {
+    document.getElementById('sm-body').textContent = 'AI unavailable: '+e.message;
+  }
+}
+
+async function explainFinding(idx) {
+  const f = (S._findings||[])[idx];
+  if(!f) return;
+  document.getElementById('sm-title').textContent = f.title||'Finding';
+  document.getElementById('sm-body').innerHTML='<div class="sm-loading"><div class="sm-spinner"></div> Analyzing…</div>';
+  document.getElementById('sparkle-overlay').classList.add('open');
+  try {
+    const {explanation}=await explainWidget(S.currentId||'','finding',f);
+    document.getElementById('sm-body').innerHTML=formatAiText(explanation);
+  } catch(e) {
+    document.getElementById('sm-body').textContent='AI unavailable: '+e.message;
+  }
+}
+
+async function openAiSummary() {
+  openSparkle('overall-score','AI Security Summary');
+}
+
+function closeSparkle(){document.getElementById('sparkle-overlay').classList.remove('open');}
+
+function formatAiText(text) {
+  if(!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^##\s+(.+)/gm,'<h4 style="color:var(--accent);margin:.5em 0 .2em">$1</h4>')
+    .replace(/^#\s+(.+)/gm,'<h3 style="color:var(--accent);margin:.6em 0 .3em">$1</h3>')
+    .replace(/^- (.+)/gm,'• $1')
+    .replace(/\n/g,'<br>');
+}
+
+// ────────────────────────────────────────────────────────────────
+// CHAT
+// ────────────────────────────────────────────────────────────────
+function toggleChat() {
+  document.getElementById('chat-sidebar').classList.toggle('open');
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const msg = inp.value.trim();
+  if(!msg) return;
+  inp.value='';
+
+  appendChatMsg('user', msg);
+  S.chatHistory.push({role:'user',content:msg});
+
+  const thinking = appendChatMsg('assistant','Thinking…', true);
+  try {
+    const {response} = await chatMsg(S.currentId||'', msg, S.chatHistory.slice(-14));
+    thinking.remove();
+    appendChatMsg('assistant', response);
+    S.chatHistory.push({role:'model',content:response});
+  } catch(e) {
+    thinking.remove();
+    appendChatMsg('assistant','AI unavailable: '+e.message);
+  }
+}
+
+function appendChatMsg(role, text, thinking=false) {
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}${thinking?' thinking':''}`;
+  el.innerHTML = thinking ? text : formatAiText(text);
+  document.getElementById('chat-messages').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
+}
+
+// ────────────────────────────────────────────────────────────────
+// PDF
+// ────────────────────────────────────────────────────────────────
+function downloadPdf() {
+  if(!S.currentId){alert('Select a scan first.');return;}
+  const a=document.createElement('a');
+  a.href=`/api/scans/${S.currentId}/pdf`;
+  a.download=`netsentinel-${S.currentId.slice(0,8)}.pdf`;
+  a.click();
+}
+
+// ────────────────────────────────────────────────────────────────
+// TABS
+// ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// SCAN TYPE TOGGLE
+// ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.scan-type-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.scan-type-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    S.scanType = btn.dataset.type;
+    document.getElementById('target-group').style.display = S.scanType==='live'?'none':'block';
+    document.getElementById('host-group').style.display   = S.scanType==='static'?'none':'block';
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// SEVERITY FILTER
+// ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.sev-filter').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sev-filter').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    S.sevFilter = btn.dataset.sev;
+    filterFindings();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// MODEL SELECTOR
+// ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.model-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    S.model = btn.dataset.model;
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// SPARKLE CLICK DELEGATION
+// ────────────────────────────────────────────────────────────────
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('.sparkle-btn[data-widget]');
+  if(!btn || btn.classList.contains('fi-sparkle')) return;
+  if(!S.currentScan){alert('Select a scan first.');return;}
+  openSparkle(btn.dataset.widget, btn.dataset.widget.replace(/-/g,' '));
+});
+
+// ────────────────────────────────────────────────────────────────
+// KEYBOARD SHORTCUTS
+// ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') { closeSparkle(); if(document.getElementById('chat-sidebar').classList.contains('open')) toggleChat(); }
+});
+
+// ────────────────────────────────────────────────────────────────
+// MAIN INIT
+// ────────────────────────────────────────────────────────────────
+async function init() {
+  setLdStatus('Loading scan history…');
+  try {
+    const scans = await getScans();
+    S.scans = scans;
+    renderScanList(scans);
+    renderHistory(scans);
+    populateCompareSelects();
+    if(scans.length){
+      setLdStatus('Loading most recent scan…');
+      await loadScan(scans[0].scan_id);
+    }
+  } catch(e) {
+    setLdStatus('Ready — no scans found yet');
+  }
+  setTimeout(hideLoading, 600);
+}
+
+init();
 </script>
 </body>
 </html>
