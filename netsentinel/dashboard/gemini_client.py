@@ -1,4 +1,4 @@
-"""Gemini API client for NetSentinel AI features (google-genai SDK)."""
+"""Groq AI client for NetSentinel AI features."""
 import json
 import logging
 import os
@@ -6,28 +6,27 @@ import os
 logger = logging.getLogger(__name__)
 
 try:
-    from google import genai
-    from google.genai import types
+    from groq import Groq
     _AVAILABLE = True
 except ImportError:
     _AVAILABLE = False
-    logger.warning("google-genai not installed — AI features disabled. Run: pip install google-genai")
+    logger.warning("groq not installed — AI features disabled. Run: pip install groq")
 
 MODELS = {
-    "flash": "gemini-2.5-pro",
-    "pro":   "gemini-2.5-pro",
-    "lite":  "gemini-1.5-flash",
+    "flash": "llama-3.3-70b-versatile",
+    "pro":   "llama-3.3-70b-versatile",
+    "lite":  "llama-3.1-8b-instant",
 }
 DEFAULT_MODEL = MODELS["flash"]
 
 
 def _client():
     if not _AVAILABLE:
-        raise RuntimeError("google-genai package not installed. Run: pip install google-genai")
-    key = os.getenv("GEMINI_API_KEY", "")
-    if not key or key == "your_gemini_api_key_here":
-        raise RuntimeError("GEMINI_API_KEY not configured. Add your key to the .env file.")
-    return genai.Client(api_key=key)
+        raise RuntimeError("groq package not installed. Run: pip install groq")
+    key = os.getenv("GROQ_API_KEY", "")
+    if not key or key == "your_groq_api_key_here":
+        raise RuntimeError("GROQ_API_KEY not configured. Add your key to the .env file.")
+    return Groq(api_key=key)
 
 
 def _top_findings(scan: dict, n: int = 5) -> str:
@@ -44,8 +43,12 @@ def _top_findings(scan: dict, n: int = 5) -> str:
 
 def _gen(prompt: str, model_name: str = DEFAULT_MODEL) -> str:
     c = _client()
-    resp = c.models.generate_content(model=model_name, contents=prompt)
-    return resp.text
+    resp = c.chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1024,
+    )
+    return resp.choices[0].message.content
 
 
 def explain_widget(widget_type: str, data: dict, scan: dict, model_name: str = DEFAULT_MODEL) -> str:
@@ -84,7 +87,7 @@ def chat(message: str, history: list, scan: dict, model_name: str = DEFAULT_MODE
     summary = scan.get("summary") or {}
     by_sev  = summary.get("by_severity") or {}
 
-    system_prompt = f"""You are NetSentinel's AI security analyst. Answer questions about this scan precisely.
+    system_content = f"""You are NetSentinel's AI security analyst. Answer questions about this scan precisely.
 
 Scan: {scan.get("target") or "N/A"} / {scan.get("host") or "N/A"}
 Grade: {scores.get("grade", "N/A")}  Overall: {scores.get("weighted_overall", 0):.0f}/100
@@ -96,20 +99,20 @@ Top findings:
 
 Be specific, actionable, professional. Reference actual findings. No emojis."""
 
-    # Build conversation contents
-    contents = [
-        types.Content(role="user",  parts=[types.Part(text=system_prompt)]),
-        types.Content(role="model", parts=[types.Part(text="Understood. I have the scan context loaded and am ready to help analyze the results.")]),
-    ]
+    messages = [{"role": "system", "content": system_content}]
     for msg in (history or [])[-12:]:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append(types.Content(role=role, parts=[types.Part(text=msg["content"])]))
-    contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
+        role = "user" if msg["role"] == "user" else "assistant"
+        messages.append({"role": role, "content": msg["content"]})
+    messages.append({"role": "user", "content": message})
 
     try:
         c = _client()
-        resp = c.models.generate_content(model=model_name, contents=contents)
-        return resp.text
+        resp = c.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            max_tokens=1024,
+        )
+        return resp.choices[0].message.content
     except Exception as e:
         logger.error(f"chat failed: {e}")
         return f"AI unavailable: {e}"
@@ -198,4 +201,4 @@ Under 500 words. Formal tone for C-level and security teams. No emojis."""
         return _gen(prompt, model_name)
     except Exception as e:
         logger.error(f"generate_report_narrative failed: {e}")
-        return f"AI narrative unavailable. Check GEMINI_API_KEY.\n\nError: {e}"
+        return f"AI narrative unavailable. Check GROQ_API_KEY.\n\nError: {e}"

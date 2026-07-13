@@ -589,9 +589,9 @@ canvas.chart-canvas{display:block;max-height:220px}
       </button>
     </div>
     <div class="model-selector">
-      <button class="model-btn active" data-model="gemini-2.5-pro">2.5 Pro</button>
-      <button class="model-btn" data-model="gemini-2.5-pro">Pro</button>
-      <button class="model-btn" data-model="gemini-1.5-flash">Lite</button>
+      <button class="model-btn active" data-model="llama-3.3-70b-versatile">Llama 70B</button>
+      <button class="model-btn" data-model="llama-3.3-70b-versatile">Pro</button>
+      <button class="model-btn" data-model="llama-3.1-8b-instant">Lite</button>
     </div>
   </div>
   <div class="chat-messages" id="chat-messages">
@@ -656,7 +656,7 @@ const S = {
   currentId: null,
   currentScan: null,
   chatHistory: [],
-  model: 'gemini-2.5-pro',
+  model: 'llama-3.3-70b-versatile',
   scanType: 'both',
   sevFilter: 'all',
   charts: {},
