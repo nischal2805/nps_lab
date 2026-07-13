@@ -13,9 +13,9 @@ except ImportError:
     logger.warning("groq not installed — AI features disabled. Run: pip install groq")
 
 MODELS = {
-    "flash": "llama-3.3-70b-versatile",
-    "pro":   "llama-3.3-70b-versatile",
-    "lite":  "llama-3.1-8b-instant",
+    "flash": "openai/gpt-oss-120b",
+    "pro":   "openai/gpt-oss-120b",
+    "lite":  "openai/gpt-oss-120b",
 }
 DEFAULT_MODEL = MODELS["flash"]
 

@@ -51,8 +51,9 @@ def _grade_color(grade: str) -> colors.Color:
 def _styles():
     base = getSampleStyleSheet()
     def s(name, **kw):
-        return ParagraphStyle(name, fontName='Helvetica', fontSize=10,
-                               textColor=TEXT, leading=14, **kw)
+        defaults = dict(fontName='Helvetica', fontSize=10, textColor=TEXT, leading=14)
+        defaults.update(kw)
+        return ParagraphStyle(name, **defaults)
     return {
         'h1':      s('h1', fontSize=26, fontName='Helvetica-Bold', textColor=ACCENT, leading=32, spaceAfter=4),
         'h2':      s('h2', fontSize=16, fontName='Helvetica-Bold', textColor=ACCENT, leading=22, spaceBefore=14, spaceAfter=6),
