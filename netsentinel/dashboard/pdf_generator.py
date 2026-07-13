@@ -18,12 +18,12 @@ from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 
 # ── Palette ──────────────────────────────────────────────────────────────────
-BG          = colors.HexColor('#010804')
-CARD        = colors.HexColor('#061510')
-ACCENT      = colors.HexColor('#00ff6e')
-ACCENT2     = colors.HexColor('#10b981')
-TEXT        = colors.HexColor('#dfffed')
-TEXT_MUTED  = colors.HexColor('#5ea87a')
+BG          = colors.white
+CARD        = colors.HexColor('#f4f8f5')
+ACCENT      = colors.HexColor('#00b856')
+ACCENT2     = colors.HexColor('#0d9e6e')
+TEXT        = colors.HexColor('#0a0a0a')
+TEXT_MUTED  = colors.HexColor('#444444')
 C_CRITICAL  = colors.HexColor('#ff3344')
 C_HIGH      = colors.HexColor('#ff8800')
 C_MEDIUM    = colors.HexColor('#ffc300')
